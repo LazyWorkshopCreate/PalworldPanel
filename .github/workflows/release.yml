@@ -1,0 +1,191 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Dry-run version tag (packages only; no tag or Release is created)"
+        required: true
+        default: "v0.1.0-rc.1"
+
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Validate version and release notes
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.metadata.outputs.version }}
+      notes: ${{ steps.metadata.outputs.notes }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Validate tag against version.json and dated notes
+        id: metadata
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
+        run: |
+          node scripts/release-metadata.mjs "$RELEASE_TAG" > "$RUNNER_TEMP/release.json"
+          echo "version=$(jq -r .version "$RUNNER_TEMP/release.json")" >> "$GITHUB_OUTPUT"
+          echo "notes=$(jq -r .notes "$RUNNER_TEMP/release.json")" >> "$GITHUB_OUTPUT"
+
+  verify:
+    name: Verify release source
+    needs: prepare
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  package-linux:
+    name: Package Linux Docker image
+    needs: [prepare, verify]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build versioned image and archive
+        run: |
+          docker build --platform linux/amd64 --build-arg PANEL_VERSION="$RELEASE_VERSION" -f deploy/Dockerfile -t "palworldpanel:$RELEASE_VERSION" .
+          mkdir -p artifacts/release
+          docker save "palworldpanel:$RELEASE_VERSION" | gzip > "artifacts/release/PalworldPanel-linux-x64-$RELEASE_VERSION.docker.tar.gz"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-linux
+          path: artifacts/release/*.docker.tar.gz
+          if-no-files-found: error
+          retention-days: 7
+
+  package-windows:
+    name: Package Windows program and installer
+    needs: [prepare, verify]
+    runs-on: windows-2025
+    timeout-minutes: 30
+    env:
+      RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: src/PalworldPanel.AdminWeb/package.json
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: src/PalworldPanel.AdminWeb/pnpm-lock.yaml
+      - name: Install verified Inno Setup 7.1.0
+        shell: pwsh
+        run: |
+          $setup = Join-Path $env:RUNNER_TEMP 'innosetup-7.1.0-x64.exe'
+          Invoke-WebRequest -Uri 'https://github.com/jrsoftware/issrc/releases/download/is-7_1_0/innosetup-7.1.0-x64.exe' -OutFile $setup
+          $expected = '0362a383ed217d4c4239b5933866dd96d3eb2102737da92f80f6057a4b40df2f'
+          if ((Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) { throw 'Inno Setup download checksum mismatch' }
+          $process = Start-Process -FilePath $setup -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-' -WindowStyle Hidden -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Inno Setup installation failed' }
+      - name: Build Inno installer and checksums
+        shell: pwsh
+        run: |
+          pnpm --dir src/PalworldPanel.AdminWeb install --frozen-lockfile
+          if ($LASTEXITCODE) { throw 'pnpm install failed' }
+          $compiler = Join-Path $env:ProgramFiles 'Inno Setup 7/ISCC.exe'
+          if (-not (Test-Path -LiteralPath $compiler)) { throw 'Inno Setup compiler missing from runner image' }
+          ./scripts/Build-WindowsInstaller.ps1 -Version $env:RELEASE_VERSION -IsccPath $compiler
+          Get-ChildItem artifacts/windows/installer -Filter *.exe | ForEach-Object {
+            $digest = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$digest  $($_.Name)" | Set-Content -LiteralPath ($_.FullName + '.sha256') -Encoding ascii
+          }
+      - name: Prepare Windows release files
+        shell: pwsh
+        run: |
+          if (-not (Test-Path 'artifacts/windows/publish/wwwroot/index.html')) { throw 'Published management UI is missing' }
+          New-Item -ItemType Directory -Path artifacts/release -Force | Out-Null
+          Compress-Archive -Path artifacts/windows/publish/* -DestinationPath "artifacts/release/PalworldPanel-win-x64-$env:RELEASE_VERSION.zip"
+          Copy-Item -LiteralPath "artifacts/windows/installer/PalworldPanel-$env:RELEASE_VERSION-win-x64-setup.exe" -Destination artifacts/release
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-windows
+          path: artifacts/release/*
+          if-no-files-found: error
+          retention-days: 7
+
+  finalize:
+    name: Validate release assets
+    needs: [prepare, package-linux, package-windows]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: release-*
+          path: artifacts/release
+          merge-multiple: true
+      - name: Validate files and create checksums
+        env:
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+        run: node scripts/prepare-release-assets.mjs artifacts/release "$RELEASE_VERSION"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-bundle
+          path: artifacts/release/*
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish GitHub Release
+    if: github.event_name == 'push'
+    needs: [prepare, finalize]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: release-bundle
+          path: artifacts/release
+      - name: Publish versioned release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_NOTES: ${{ needs.prepare.outputs.notes }}
+        run: |
+          prerelease=false
+          if [[ "$RELEASE_TAG" == *-* ]]; then prerelease=true; fi
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" --title "$RELEASE_TAG" --notes-file "$RELEASE_NOTES" --prerelease="$prerelease"
+            gh release upload "$RELEASE_TAG" artifacts/release/* --clobber
+          else
+            flags=()
+            if [[ "$prerelease" == true ]]; then flags+=(--prerelease); fi
+            gh release create "$RELEASE_TAG" artifacts/release/* --verify-tag --title "$RELEASE_TAG" --notes-file "$RELEASE_NOTES" "${flags[@]}"
+          fi

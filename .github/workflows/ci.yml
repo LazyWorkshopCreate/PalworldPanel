@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: src/PalworldPanel.AdminWeb/package.json
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: src/PalworldPanel.AdminWeb/pnpm-lock.yaml
+      - name: Locked dependencies, documentation, tests and frontend build
+        shell: pwsh
+        run: |
+          if ($IsLinux) { ./scripts/Test-LocalBuild.ps1 -SkipDocker -LinuxTestsAsRoot }
+          else { ./scripts/Test-LocalBuild.ps1 -SkipDocker }
+      - name: Check public website and release contracts
+        run: |
+          node scripts/Build-Website.mjs --check
+          node scripts/Test-Website.mjs
+          node --test scripts/release-metadata.test.mjs scripts/release-assets.test.mjs
+
+  docker:
+    name: Linux container
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build and run container unit tests
+        run: |
+          docker build -f deploy/Dockerfile.tests -t palworldpanel-tests:ci .
+          docker run --rm palworldpanel-tests:ci
+      - name: Build application image
+        run: docker build --build-arg PANEL_VERSION="$(jq -r .version version.json)" -f deploy/Dockerfile -t palworldpanel:ci .

@@ -1,0 +1,1209 @@
+[
+  {
+    "key": "Difficulty",
+    "label": "游戏难度",
+    "type": "enum",
+    "defaultValue": "None",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "RandomizerType",
+    "label": "帕鲁随机模式",
+    "type": "enum",
+    "defaultValue": "None",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "RandomizerSeed",
+    "label": "随机种子",
+    "type": "string",
+    "defaultValue": "",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bIsRandomizerPalLevelRandom",
+    "label": "随机帕鲁等级",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "DayTimeSpeedRate",
+    "label": "白天时间流逝倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "NightTimeSpeedRate",
+    "label": "夜间时间流逝倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "ExpRate",
+    "label": "经验获取倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "PalCaptureRate",
+    "label": "帕鲁捕获倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "PalSpawnNumRate",
+    "label": "帕鲁刷新数量倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "PalDamageRateAttack",
+    "label": "帕鲁攻击伤害倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "PalDamageRateDefense",
+    "label": "帕鲁承受伤害倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "PlayerDamageRateAttack",
+    "label": "玩家攻击伤害倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "PlayerDamageRateDefense",
+    "label": "玩家承受伤害倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "PlayerStomachDecreaceRate",
+    "label": "玩家饥饿消耗倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "PlayerStaminaDecreaceRate",
+    "label": "玩家耐力消耗倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "PlayerAutoHPRegeneRate",
+    "label": "玩家生命恢复倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "PlayerAutoHpRegeneRateInSleep",
+    "label": "玩家睡眠生命恢复倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "PalStomachDecreaceRate",
+    "label": "帕鲁饥饿消耗倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "PalStaminaDecreaceRate",
+    "label": "帕鲁耐力消耗倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "PalAutoHPRegeneRate",
+    "label": "帕鲁生命恢复倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "PalAutoHpRegeneRateInSleep",
+    "label": "帕鲁休息生命恢复倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "BuildObjectHpRate",
+    "label": "建筑生命值倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "BuildObjectDamageRate",
+    "label": "建筑受攻击伤害倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": "attackDamageRate",
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "BuildObjectDeteriorationDamageRate",
+    "label": "建筑自然衰减倍率",
+    "type": "number",
+    "defaultValue": "0",
+    "ruleKey": "deteriorationRate",
+    "editable": true,
+    "secret": false,
+    "integer": true
+  },
+  {
+    "key": "CollectionDropRate",
+    "label": "采集掉落倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "CollectionObjectHpRate",
+    "label": "采集物生命值倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "CollectionObjectRespawnSpeedRate",
+    "label": "采集物重生时间倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "EnemyDropItemRate",
+    "label": "敌人掉落倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "DeathPenalty",
+    "label": "死亡掉落",
+    "type": "enum",
+    "defaultValue": "None",
+    "ruleKey": "deathPenalty",
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bEnablePlayerToPlayerDamage",
+    "label": "玩家互相伤害",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bEnableFriendlyFire",
+    "label": "友军伤害",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bEnableInvaderEnemy",
+    "label": "据点袭击",
+    "type": "boolean",
+    "defaultValue": "True",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bActiveUNKO",
+    "label": "帕鲁排泄物生成",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bEnableAimAssistPad",
+    "label": "手柄辅助瞄准",
+    "type": "boolean",
+    "defaultValue": "True",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bEnableAimAssistKeyboard",
+    "label": "键鼠辅助瞄准",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "DropItemMaxNum",
+    "label": "最大掉落物数量",
+    "type": "number",
+    "defaultValue": "3000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": true
+  },
+  {
+    "key": "DropItemMaxNum_UNKO",
+    "label": "最大排泄物数量",
+    "type": "number",
+    "defaultValue": "100",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": true
+  },
+  {
+    "key": "BaseCampMaxNum",
+    "label": "全服据点上限",
+    "type": "number",
+    "defaultValue": "128",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": true
+  },
+  {
+    "key": "BaseCampWorkerMaxNum",
+    "label": "据点工作帕鲁上限",
+    "type": "number",
+    "defaultValue": "15",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": true
+  },
+  {
+    "key": "DropItemAliveMaxHours",
+    "label": "掉落物保留时间",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bAutoResetGuildNoOnlinePlayers",
+    "label": "自动清理离线公会",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "AutoResetGuildTimeNoOnlinePlayers",
+    "label": "公会离线清理时长",
+    "type": "number",
+    "defaultValue": "72.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "GuildPlayerMaxNum",
+    "label": "公会人数上限",
+    "type": "number",
+    "defaultValue": "20",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": true
+  },
+  {
+    "key": "BaseCampMaxNumInGuild",
+    "label": "每公会据点上限",
+    "type": "number",
+    "defaultValue": "4",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": true
+  },
+  {
+    "key": "PalEggDefaultHatchingTime",
+    "label": "巨大帕鲁蛋孵化时间",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "WorkSpeedRate",
+    "label": "工作速度倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "AutoSaveSpan",
+    "label": "自动保存间隔",
+    "type": "number",
+    "defaultValue": "30.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bIsMultiplay",
+    "label": "多人游戏模式",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bIsPvP",
+    "label": "玩家对战模式",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bHardcore",
+    "label": "硬核模式",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bCharacterRecreateInHardcore",
+    "label": "硬核死亡后重建角色",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bPalLost",
+    "label": "死亡永久丢失帕鲁",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bCanPickupOtherGuildDeathPenaltyDrop",
+    "label": "拾取其他公会死亡掉落",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bEnableNonLoginPenalty",
+    "label": "离线惩罚",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": "offlinePenalty",
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bEnableFastTravel",
+    "label": "快速旅行",
+    "type": "boolean",
+    "defaultValue": "True",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bIsStartLocationSelectByMap",
+    "label": "地图选择出生地点",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bExistPlayerAfterLogout",
+    "label": "退出后角色留在世界",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bEnableDefenseOtherGuildPlayer",
+    "label": "防御其他公会玩家",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bInvisibleOtherGuildBaseCampAreaFX",
+    "label": "隐藏其他公会据点边界",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bBuildAreaLimit",
+    "label": "建筑区域限制",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "ItemWeightRate",
+    "label": "物品重量倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "CoopPlayerMaxNum",
+    "label": "合作玩家上限",
+    "type": "number",
+    "defaultValue": "4",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": true
+  },
+  {
+    "key": "ServerPlayerMaxNum",
+    "label": "玩家上限",
+    "type": "number",
+    "defaultValue": "16",
+    "ruleKey": "maxPlayers",
+    "editable": true,
+    "secret": false,
+    "integer": true
+  },
+  {
+    "key": "ServerName",
+    "label": "实例名称",
+    "type": "string",
+    "defaultValue": "",
+    "ruleKey": "name",
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "ServerDescription",
+    "label": "服务器描述",
+    "type": "string",
+    "defaultValue": "",
+    "ruleKey": "description",
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "AdminPassword",
+    "label": "管理密码",
+    "type": "string",
+    "defaultValue": "",
+    "ruleKey": null,
+    "editable": false,
+    "secret": true,
+    "integer": false
+  },
+  {
+    "key": "ServerPassword",
+    "label": "游戏密码",
+    "type": "string",
+    "defaultValue": "",
+    "ruleKey": null,
+    "editable": false,
+    "secret": true,
+    "integer": false
+  },
+  {
+    "key": "PublicPort",
+    "label": "服务器公布端口",
+    "type": "number",
+    "defaultValue": "8211",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": true
+  },
+  {
+    "key": "PublicIP",
+    "label": "服务器公布地址",
+    "type": "string",
+    "defaultValue": "",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "RCONEnabled",
+    "label": "启用远程控制接口",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": false,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "RCONPort",
+    "label": "远程控制端口",
+    "type": "number",
+    "defaultValue": "25575",
+    "ruleKey": null,
+    "editable": false,
+    "secret": false,
+    "integer": true
+  },
+  {
+    "key": "Region",
+    "label": "服务器区域",
+    "type": "string",
+    "defaultValue": "",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bUseAuth",
+    "label": "玩家身份认证",
+    "type": "boolean",
+    "defaultValue": "True",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "BanListURL",
+    "label": "封禁名单地址",
+    "type": "string",
+    "defaultValue": "https://b.palworldgame.com/api/banlist.txt",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "RESTAPIEnabled",
+    "label": "启用管理接口",
+    "type": "boolean",
+    "defaultValue": "True",
+    "ruleKey": null,
+    "editable": false,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "RESTAPIPort",
+    "label": "管理接口端口",
+    "type": "number",
+    "defaultValue": "8212",
+    "ruleKey": null,
+    "editable": false,
+    "secret": false,
+    "integer": true
+  },
+  {
+    "key": "bShowPlayerList",
+    "label": "显示玩家列表",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "ChatPostLimitPerMinute",
+    "label": "每分钟聊天消息上限",
+    "type": "number",
+    "defaultValue": "30",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": true
+  },
+  {
+    "key": "CrossplayPlatforms",
+    "label": "允许跨平台列表",
+    "type": "list",
+    "defaultValue": "(Steam,Xbox,PS5,Mac)",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bIsUseBackupSaveData",
+    "label": "游戏内置存档备份",
+    "type": "boolean",
+    "defaultValue": "True",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "SupplyDropSpan",
+    "label": "陨石与补给间隔",
+    "type": "number",
+    "defaultValue": "180",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": true
+  },
+  {
+    "key": "EnablePredatorBossPal",
+    "label": "掠食者首领帕鲁",
+    "type": "boolean",
+    "defaultValue": "True",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "MaxBuildingLimitNum",
+    "label": "每玩家建筑数量上限",
+    "type": "number",
+    "defaultValue": "0",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": true
+  },
+  {
+    "key": "ServerReplicatePawnCullDistance",
+    "label": "帕鲁同步距离",
+    "type": "number",
+    "defaultValue": "15000.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bAllowGlobalPalboxExport",
+    "label": "全局帕鲁终端导出",
+    "type": "boolean",
+    "defaultValue": "True",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bAllowGlobalPalboxImport",
+    "label": "全局帕鲁终端导入",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "EquipmentDurabilityDamageRate",
+    "label": "装备耐久消耗倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "ItemContainerForceMarkDirtyInterval",
+    "label": "容器强制同步间隔",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "ItemCorruptionMultiplier",
+    "label": "食物腐败倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "PhysicsActiveDropItemMaxNum",
+    "label": "启用物理的掉落物上限",
+    "type": "number",
+    "defaultValue": "-1",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": true
+  },
+  {
+    "key": "bAllowClientMod",
+    "label": "允许客户端模组",
+    "type": "boolean",
+    "defaultValue": "True",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "PlayerDataPalStorageUpdateCheckTickInterval",
+    "label": "帕鲁存储更新检查间隔",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "LogFormatType",
+    "label": "日志格式",
+    "type": "enum",
+    "defaultValue": "Text",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bIsShowJoinLeftMessage",
+    "label": "显示加入与离开消息",
+    "type": "boolean",
+    "defaultValue": "True",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "MonsterFarmActionSpeedRate",
+    "label": "牧场产出速度倍率",
+    "type": "number",
+    "defaultValue": "1.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "DenyTechnologyList",
+    "label": "禁用科技列表",
+    "type": "list",
+    "defaultValue": "",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "GuildRejoinCooldownMinutes",
+    "label": "重新加入公会冷却",
+    "type": "number",
+    "defaultValue": "0",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": true
+  },
+  {
+    "key": "AutoTransferMasterCheckIntervalSeconds",
+    "label": "会长自动转让检查间隔",
+    "type": "number",
+    "defaultValue": "3600.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "AutoTransferMasterThresholdDays",
+    "label": "会长自动转让离线天数",
+    "type": "number",
+    "defaultValue": "14",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": true
+  },
+  {
+    "key": "MaxGuildsPerFrame",
+    "label": "每帧处理公会上限",
+    "type": "number",
+    "defaultValue": "10",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": true
+  },
+  {
+    "key": "BlockRespawnTime",
+    "label": "重生冷却时间",
+    "type": "number",
+    "defaultValue": "5.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "RespawnPenaltyDurationThreshold",
+    "label": "重生惩罚生存时长阈值",
+    "type": "number",
+    "defaultValue": "0.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "RespawnPenaltyTimeScale",
+    "label": "重生惩罚时间倍率",
+    "type": "number",
+    "defaultValue": "2.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bDisplayPvPItemNumOnWorldMap_BaseCamp",
+    "label": "地图显示据点对战物品数",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bDisplayPvPItemNumOnWorldMap_Player",
+    "label": "地图显示玩家对战物品数",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "AdditionalDropItemWhenPlayerKillingInPvPMode",
+    "label": "对战击杀额外掉落物品",
+    "type": "string",
+    "defaultValue": "PlayerDropItem",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "AdditionalDropItemNumWhenPlayerKillingInPvPMode",
+    "label": "对战击杀额外掉落数量",
+    "type": "number",
+    "defaultValue": "1",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": true
+  },
+  {
+    "key": "bAdditionalDropItemWhenPlayerKillingInPvPMode",
+    "label": "启用对战击杀额外掉落",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bEnableVoiceChat",
+    "label": "语音聊天",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "VoiceChatMaxVolumeDistance",
+    "label": "语音最大音量距离",
+    "type": "number",
+    "defaultValue": "3000.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "VoiceChatZeroVolumeDistance",
+    "label": "语音静音距离",
+    "type": "number",
+    "defaultValue": "15000.000000",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bAllowEnhanceStat_Health",
+    "label": "允许加点生命",
+    "type": "boolean",
+    "defaultValue": "True",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bAllowEnhanceStat_Attack",
+    "label": "允许加点攻击",
+    "type": "boolean",
+    "defaultValue": "True",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bAllowEnhanceStat_Stamina",
+    "label": "允许加点耐力",
+    "type": "boolean",
+    "defaultValue": "True",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bAllowEnhanceStat_Weight",
+    "label": "允许加点负重",
+    "type": "boolean",
+    "defaultValue": "True",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bAllowEnhanceStat_WorkSpeed",
+    "label": "允许加点工作速度",
+    "type": "boolean",
+    "defaultValue": "True",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bEnableBuildingPlayerUIdDisplay",
+    "label": "显示建筑创建者标识",
+    "type": "boolean",
+    "defaultValue": "False",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "BuildingNameDisplayCacheTTLSeconds",
+    "label": "建筑名称缓存时间",
+    "type": "number",
+    "defaultValue": "60",
+    "ruleKey": null,
+    "editable": true,
+    "secret": false,
+    "integer": true
+  },
+  {
+    "key": "FishingDifficultyRate",
+    "label": "钓鱼难度倍率",
+    "type": "number",
+    "defaultValue": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bAllowEnemyCampSpawnNearBaseCamp",
+    "label": "允许敌方营地靠近据点生成",
+    "type": "boolean",
+    "defaultValue": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  },
+  {
+    "key": "bEnableFastTravelOnlyBaseCamp",
+    "label": "快速旅行仅限据点之间",
+    "type": "boolean",
+    "defaultValue": null,
+    "editable": true,
+    "secret": false,
+    "integer": false
+  }
+]

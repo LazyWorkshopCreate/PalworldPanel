@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="PalworldPanel：适用于单台服务器的幻兽帕鲁多实例管理面板。支持 Windows 服务、Docker Linux 游戏实例、参数草稿与备份恢复。"
+    />
+    <meta name="theme-color" content="#315fe4" />
+    <title>PalworldPanel · 让每个世界井然有序</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+  <link rel="alternate" hreflang="zh-CN" href="./index.html"><link rel="alternate" hreflang="en" href="./en/index.html"><link rel="alternate" hreflang="x-default" href="./index.html"></head>
+  <body>
+    <a class="skip-link" href="#main">跳到正文</a>
+    <header class="header">
+      <a class="brand" href="./"
+        ><img src="./favicon.svg" alt="" width="36" height="36" /><span
+          >PalworldPanel<small>独立世界 · 受控维护</small></span
+        ></a
+      >
+      <nav aria-label="主导航">
+        <a href="./index.html" aria-current="page">首页</a>
+        <a href="./docs/index.html">文档</a
+        ><a href="./releases/index.html">发布日志</a>
+        <a class="button small" href="https://github.com/LazyWorkshopCreate/PalworldPanel"
+          >GitHub ↗</a
+        ><a class="language-switch" lang="en" hreflang="en" aria-label="Switch to English" href="./en/index.html">English</a>
+      </nav>
+    </header>
+    <main id="main">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">PALWORLD SERVER MANAGEMENT</p>
+          <h1>让每个世界，<br />井然有序。</h1>
+          <p class="lead">
+            为单台服务器打造的帕鲁管理面板。<br />统一管理独立实例，让配置、维护与恢复都有迹可循。
+          </p>
+          <div class="actions">
+            <a class="button" href="#deployment"
+              >开始部署 <span aria-hidden="true">→</span></a
+            ><a class="button secondary" href="#features">了解功能</a>
+          </div>
+          <p class="platforms">
+            Windows 服务 <span>·</span> Linux 容器 <span>·</span> Docker
+            游戏实例
+          </p>
+        </div>
+        <div class="preview" aria-label="功能示意，非实时运行数据">
+          <div class="preview-top">
+            <span class="preview-dots" aria-hidden="true">● ● ●</span
+            ><span>你的独立世界</span><span class="badge">功能示意</span>
+          </div>
+          <div class="preview-body">
+            <div class="mini-metrics">
+              <div><small>世界管理</small><strong>各自独立</strong></div>
+              <div><small>维护流程</small><strong>可追踪</strong></div>
+            </div>
+            <div class="world">
+              <div>
+                <span class="world-icon" aria-hidden="true">◇</span
+                ><strong>朋友们的世界</strong>
+              </div>
+              <span class="status">运行中</span>
+            </div>
+            <div class="mini-tabs">
+              <span>概览</span><span class="active">设置</span
+              ><span>备份与恢复</span><span>任务</span>
+            </div>
+            <div class="setting">
+              <span>玩家上限<small>ServerPlayerMaxNum</small></span
+              ><span class="draft">草稿已修改</span>
+            </div>
+            <div class="setting">
+              <span>访问密码<small>只显示设置状态</small></span
+              ><span>已设置</span>
+            </div>
+            <div class="preview-note">
+              <span aria-hidden="true">↺</span>
+              保存草稿，确认后应用。每次维护都有记录。
+            </div>
+          </div>
+        </div>
+      </section>
+      <section id="features" class="section">
+        <p class="eyebrow">清晰的控制，踏实的维护</p>
+        <h2>世界管理，清晰有序。</h2>
+        <div class="cards">
+          <article>
+            <span class="feature-icon" aria-hidden="true">◇</span>
+            <h3>世界各自独立</h3>
+            <p>
+              实例目录、端口、密码、存档与备份分别管理。创建新世界，或受控接管已有实例。
+            </p>
+          </article>
+          <article>
+            <span class="feature-icon" aria-hidden="true">≡</span>
+            <h3>参数一目了然</h3>
+            <p>
+              中文名称和参数字段同时展示，支持搜索。对照当前值、默认值和草稿，确认后再应用。
+            </p>
+          </article>
+          <article>
+            <span class="feature-icon" aria-hidden="true">↺</span>
+            <h3>备份与恢复</h3>
+            <p>
+              定时与手动备份分开操作。恢复前备份并停止对应实例，支持加密导出恢复点。
+            </p>
+          </article>
+          <article>
+            <span class="feature-icon" aria-hidden="true">✓</span>
+            <h3>操作有进度</h3>
+            <p>
+              初始化和维护由后台任务执行，展示阶段、结果和处理提示。重要操作需要二次确认。
+            </p>
+          </article>
+          <article>
+            <span class="feature-icon" aria-hidden="true">⌁</span>
+            <h3>状态集中查看</h3>
+            <p>
+              查看主机监控、实例状态及最新日志。白名单内可匿名查看只读仪表盘，登录后才能管理。
+            </p>
+          </article>
+          <article>
+            <span class="feature-icon" aria-hidden="true">▣</span>
+            <h3>面向内网管理</h3>
+            <p>
+              通过精确 IP 白名单控制访问。管理接口留在本机或内网，游戏流量使用
+              UDP。
+            </p>
+          </article>
+        </div>
+      </section>
+      <section id="deployment" class="section">
+        <p class="eyebrow">选择适合你的运行方式</p>
+        <h2>一个面板，两种部署方式。</h2>
+        <div class="deployments">
+          <article>
+            <div class="deployment-heading">
+              <h3>Windows</h3>
+              <span class="badge">Inno 安装包</span>
+            </div>
+            <p>
+              面板作为 Windows 服务运行，游戏实例仍由 Docker Desktop 的 Linux
+              引擎承载。
+            </p>
+            <ol>
+              <li>
+                安装并启动 Docker Desktop，切换到 Linux containers，确认 Compose
+                v2 可用。
+              </li>
+              <li>
+                获取流水线生成的安装包，配置内网地址、端口和允许访问的 IP。
+              </li>
+              <li>首次访问控制台设置管理员密码，然后创建或接管实例。</li>
+            </ol>
+            <a
+              class="text-link"
+              href="https://github.com/LazyWorkshopCreate/PalworldPanel/releases"
+              >获取发行版本 ↗</a
+            ><small class="hint"
+              >版本发行后可下载；当前源码与发行包需 GitHub 仓库访问权限。</small
+            >
+          </article>
+          <article>
+            <div class="deployment-heading">
+              <h3>Linux</h3>
+              <span class="badge">Docker 容器</span>
+            </div>
+            <p>
+              前后端打包为一个面板镜像，使用 Docker Compose
+              管理本机的独立游戏容器。
+            </p>
+            <ol>
+              <li>
+                准备 Docker Engine 与 Compose v2，检查磁盘空间和资源预算。
+              </li>
+              <li>从源码构建面板镜像，配置持久化目录、内网白名单及 TLS。</li>
+              <li>
+                挂载独立的数据目录与 Docker socket，完成初始化后访问控制台。
+              </li>
+            </ol>
+            <pre><code>docker build -f deploy/Dockerfile   -t palworldpanel:local .</code></pre>
+            <small class="hint">面板需要宿主 root 与 Docker 管理权限。</small>
+          </article>
+        </div>
+      </section>
+      <section id="guide" class="section guide">
+        <div>
+          <p class="eyebrow">从第一次访问开始</p>
+          <h2>先建立世界，再从容维护。</h2>
+          <p>
+            <a class="text-link" href="./docs/guide.html">阅读完整使用指南 →</a>
+          </p>
+          <p>实际管理控制台运行在你自己的服务器上。</p>
+        </div>
+        <ol class="steps">
+          <li>
+            <span>01</span>
+            <div>
+              <h3>准备宿主</h3>
+              <p>确认 Docker Linux 引擎、可用端口、存储与资源预算。</p>
+            </div>
+          </li>
+          <li>
+            <span>02</span>
+            <div>
+              <h3>建立访问权限</h3>
+              <p>配置精确 IP 白名单，首次访问设置管理员密码。</p>
+            </div>
+          </li>
+          <li>
+            <span>03</span>
+            <div>
+              <h3>创建独立世界</h3>
+              <p>
+                创建新实例，跟踪初始化状态；游戏客户端使用实例的 IP 与 UDP
+                端口连接。
+              </p>
+            </div>
+          </li>
+          <li>
+            <span>04</span>
+            <div>
+              <h3>有计划地维护</h3>
+              <p>
+                设置备份策略，修改参数先保存草稿，再确认应用并查看任务结果。
+              </p>
+            </div>
+          </li>
+        </ol>
+      </section>
+      <section class="closing">
+        <h2>少一些维护负担，多一些探索时间。</h2>
+        <p>.NET · React · SQLite · Docker</p>
+        <a class="button" href="https://github.com/LazyWorkshopCreate/PalworldPanel"
+          >查看项目 ↗</a
+        >
+      </section>
+    </main>
+    <footer>
+      <span>PalworldPanel · 单服务器多实例管理</span
+      ><span>非官方社区工具，与游戏开发商无隶属关系。</span>
+    </footer>
+  </body>
+</html>

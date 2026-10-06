@@ -1,0 +1,9 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:e70cdb7f80b0348f5cb85f19a8f670fca061f033d57eed12fa003d58b0e06317
+RUN apt-get update && apt-get install -y --no-install-recommends libsqlite3-0 && rm -rf /var/lib/apt/lists/*
+WORKDIR /source
+COPY global.json Directory.Build.props PalworldPanel.sln ./
+COPY src/PalworldPanel.Server/ src/PalworldPanel.Server/
+COPY src/PalworldPanel.Contracts/game-settings.json src/PalworldPanel.Contracts/game-settings.json
+COPY tests/PalworldPanel.UnitTests/ tests/PalworldPanel.UnitTests/
+RUN dotnet restore PalworldPanel.sln --locked-mode && dotnet build PalworldPanel.sln --no-restore -c Release
+ENTRYPOINT ["dotnet", "test", "PalworldPanel.sln", "--no-build", "--no-restore", "-c", "Release", "--logger", "console;verbosity=minimal"]

@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="PalworldPanel: manage multiple Palworld instances on one server. Windows services, Docker game instances, configuration drafts, backups and recovery."
+    />
+    <meta name="theme-color" content="#315fe4" />
+    <title>PalworldPanel · Keep every world in order</title>
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../styles.css" />
+  <link rel="alternate" hreflang="zh-CN" href="../index.html"><link rel="alternate" hreflang="en" href="./index.html"><link rel="alternate" hreflang="x-default" href="../index.html"></head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="header">
+      <a class="brand" href="./index.html"
+        ><img src="../favicon.svg" alt="" width="36" height="36" /><span
+          >PalworldPanel<small
+            >Independent worlds · Controlled maintenance</small
+          ></span
+        ></a
+      >
+      <nav aria-label="Main navigation">
+        <a href="./index.html" aria-current="page">Home</a
+        ><a href="./docs/index.html">Documentation</a
+        ><a href="./releases/index.html">Release notes</a
+        ><a class="button small" href="https://github.com/LazyWorkshopCreate/PalworldPanel"
+          >GitHub ↗</a
+        ><a class="language-switch" lang="zh-CN" hreflang="zh-CN" aria-label="切换到中文" href="../index.html">中文</a>
+      </nav>
+    </header>
+    <main id="main">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">PALWORLD SERVER MANAGEMENT</p>
+          <h1>Keep every<br />world in order.</h1>
+          <p class="lead">
+            A Palworld panel for a single server.<br />Manage independent
+            instances with traceable configuration, maintenance and recovery.
+          </p>
+          <div class="actions">
+            <a class="button" href="#deployment"
+              >Get started <span aria-hidden="true">→</span></a
+            ><a class="button secondary" href="#features">Explore features</a>
+          </div>
+          <p class="platforms">
+            Windows service <span>·</span> Linux containers
+            <span>·</span> Docker game instances
+          </p>
+        </div>
+        <div
+          class="preview"
+          aria-label="Feature illustration, not live runtime data"
+        >
+          <div class="preview-top">
+            <span class="preview-dots" aria-hidden="true">● ● ●</span
+            ><span>Your independent worlds</span
+            ><span class="badge">Illustration</span>
+          </div>
+          <div class="preview-body">
+            <div class="mini-metrics">
+              <div><small>Worlds</small><strong>Independent</strong></div>
+              <div><small>Maintenance</small><strong>Traceable</strong></div>
+            </div>
+            <div class="world">
+              <div>
+                <span class="world-icon" aria-hidden="true">◇</span
+                ><strong>Friends' world</strong>
+              </div>
+              <span class="status">Running</span>
+            </div>
+            <div class="mini-tabs">
+              <span>Overview</span><span class="active">Settings</span
+              ><span>Backups</span><span>Tasks</span>
+            </div>
+            <div class="setting">
+              <span>Player limit<small>ServerPlayerMaxNum</small></span
+              ><span class="draft">Draft changed</span>
+            </div>
+            <div class="setting">
+              <span>Access passwords<small>Status only</small></span
+              ><span>Configured</span>
+            </div>
+            <div class="preview-note">
+              <span aria-hidden="true">↺</span>Save a draft, then confirm to
+              apply. Every maintenance action is recorded.
+            </div>
+          </div>
+        </div>
+      </section>
+      <section id="features" class="section">
+        <p class="eyebrow">CLEAR CONTROLS, RELIABLE MAINTENANCE</p>
+        <h2>World management, in order.</h2>
+        <div class="cards">
+          <article>
+            <span class="feature-icon" aria-hidden="true">◇</span>
+            <h3>Independent worlds</h3>
+            <p>
+              Separate instance directories, ports, passwords, saves and
+              backups. Create new worlds or take over existing instances through
+              a controlled workflow.
+            </p>
+          </article>
+          <article>
+            <span class="feature-icon" aria-hidden="true">≡</span>
+            <h3>Clear settings</h3>
+            <p>
+              Search Chinese setting names and parameter fields in the console.
+              Compare current, default and draft values before confirming
+              changes.
+            </p>
+          </article>
+          <article>
+            <span class="feature-icon" aria-hidden="true">↺</span>
+            <h3>Backups and recovery</h3>
+            <p>
+              Separate scheduled and manual backup workflows. Back up and stop
+              the target before recovery, and export recovery points with
+              encryption.
+            </p>
+          </article>
+          <article>
+            <span class="feature-icon" aria-hidden="true">✓</span>
+            <h3>Visible progress</h3>
+            <p>
+              Background tasks report initialization and maintenance stages,
+              outcomes and next steps. Important actions require confirmation.
+            </p>
+          </article>
+          <article>
+            <span class="feature-icon" aria-hidden="true">⌁</span>
+            <h3>Status in one place</h3>
+            <p>
+              View host metrics, instance status and recent logs. Allowlisted
+              visitors can view the read-only dashboard; management requires
+              signing in.
+            </p>
+          </article>
+          <article>
+            <span class="feature-icon" aria-hidden="true">▣</span>
+            <h3>Private-network access</h3>
+            <p>
+              Control access with an exact IP allowlist. Management interfaces
+              stay local or on your private network; game traffic uses UDP.
+            </p>
+          </article>
+        </div>
+      </section>
+      <section id="deployment" class="section">
+        <p class="eyebrow">CHOOSE HOW YOU RUN IT</p>
+        <h2>One panel, two deployment options.</h2>
+        <div class="deployments">
+          <article>
+            <div class="deployment-heading">
+              <h3>Windows</h3>
+              <span class="badge">Inno installer</span>
+            </div>
+            <p>
+              The panel runs as a Windows service. Game instances run on the
+              Docker Desktop Linux engine.
+            </p>
+            <ol>
+              <li>
+                Install and start Docker Desktop, select Linux containers and
+                verify Compose v2.
+              </li>
+              <li>
+                Get the pipeline-built installer and configure a private-network
+                address, port and allowed IPs.
+              </li>
+              <li>
+                Set the administrator password on first console access, then
+                create or take over an instance.
+              </li>
+            </ol>
+            <a
+              class="text-link"
+              href="https://github.com/LazyWorkshopCreate/PalworldPanel/releases"
+              >Get a release ↗</a
+            ><small class="hint"
+              >Downloads become available when released. Source and release
+              packages currently require GitHub repository access.</small
+            >
+          </article>
+          <article>
+            <div class="deployment-heading">
+              <h3>Linux</h3>
+              <span class="badge">Docker container</span>
+            </div>
+            <p>
+              The frontend and backend ship in one panel image. Docker Compose
+              manages independent game containers on the host.
+            </p>
+            <ol>
+              <li>
+                Prepare Docker Engine and Compose v2; check disk space and
+                resource budgets.
+              </li>
+              <li>
+                Build the panel image from source and configure persistent
+                directories, the private-network allowlist and TLS.
+              </li>
+              <li>
+                Mount dedicated data directories and the Docker socket, then
+                initialize and open the console.
+              </li>
+            </ol>
+            <pre><code>docker build -f deploy/Dockerfile -t palworldpanel:local .</code></pre>
+            <small class="hint"
+              >The panel requires host root and Docker administration
+              privileges.</small
+            >
+          </article>
+        </div>
+      </section>
+      <section id="guide" class="section guide">
+        <div>
+          <p class="eyebrow">FROM YOUR FIRST VISIT</p>
+          <h2>Create a world.<br />Maintain it with confidence.</h2>
+          <p>
+            <a class="text-link" href="./docs/guide.html"
+              >Read the full user guide →</a
+            >
+          </p>
+          <p>
+            The management console runs on your own server. The website is
+            bilingual; the console currently uses Chinese.
+          </p>
+        </div>
+        <ol class="steps">
+          <li>
+            <span>01</span>
+            <div>
+              <h3>Prepare the host</h3>
+              <p>
+                Check the Docker Linux engine, available ports, storage and
+                resource budgets.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span>02</span>
+            <div>
+              <h3>Configure access</h3>
+              <p>
+                Set an exact IP allowlist and create the administrator password
+                on first access.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span>03</span>
+            <div>
+              <h3>Create an independent world</h3>
+              <p>
+                Create an instance and follow initialization progress. Connect
+                from the game client using the instance IP and UDP port.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span>04</span>
+            <div>
+              <h3>Plan maintenance</h3>
+              <p>
+                Set a backup policy. Save setting changes as a draft, confirm to
+                apply and check the task outcome.
+              </p>
+            </div>
+          </li>
+        </ol>
+      </section>
+      <section class="closing">
+        <h2>Less maintenance. More exploring.</h2>
+        <p>.NET · React · SQLite · Docker</p>
+        <a class="button" href="https://github.com/LazyWorkshopCreate/PalworldPanel"
+          >View the project ↗</a
+        >
+      </section>
+    </main>
+    <footer>
+      <span>PalworldPanel · Multiple instances on one server</span
+      ><span
+        >An unofficial community tool, unaffiliated with the game
+        developer.</span
+      >
+    </footer>
+  </body>
+</html>
