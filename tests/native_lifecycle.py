@@ -137,11 +137,16 @@ elif args.command in ("maintenance", "maintenance-tail", "maintenance-finish"):
         run_action("start")
     if args.command != "maintenance-finish":
         run_action("apply-config")
-        task = run_action("upgrade", {"mode": "image", "image": original["image"], "expectedGameBuild": original["gameBuild"]}, "NeedsAttention")
-        assert task["safeCode"] == "PlayerVerificationPending"
-        reject_unverified_players(task)
-        rollback(task)
-        run_action("start")
+        update = request("/instances/" + args.id + "/update-check", "POST", {}, {"X-CSRF-Token": request("/session")["csrfToken"]})
+        if update["status"] == "available":
+            task = run_action("upgrade", {"updateToken": update["updateToken"]}, "NeedsAttention")
+            assert task["safeCode"] == "PlayerVerificationPending"
+            reject_unverified_players(task)
+            rollback(task)
+            run_action("start")
+        else:
+            assert update["status"] == "up-to-date" and update["updateToken"] is None
+            print("PASS current installation does not create unnecessary upgrade", flush=True)
     run_action("retain-data")
     assert (root / "data/Pal/Saved").is_dir()
     run_action("start")

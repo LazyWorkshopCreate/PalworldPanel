@@ -14,6 +14,7 @@ public sealed class TaskRecoveryService(SqliteStore store, InstanceService insta
         instances.CheckRoot(instance);
         using var instanceLock = DiskLock.AcquireInstance(instances.Options.StateRoot, instance.Root, instance.Id);
         if (store.Task(id).State != "NeedsAttention") throw new PanelException("RecoveryStateChanged", "任务已经变化。", 409);
+        if (task.Kind == "upgrade") await docker.StopUpdaterAsync(task.Id);
         if (resolution == "start-verification")
         {
             if (task.SafeCode != "PlayerVerificationPending") throw new PanelException("RecoveryRequired", "该任务不能直接启动验收。", 409);

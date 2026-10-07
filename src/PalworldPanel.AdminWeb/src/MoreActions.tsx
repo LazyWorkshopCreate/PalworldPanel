@@ -55,9 +55,14 @@ export function MoreActions({ children }: { children: React.ReactNode }) {
           aria-label="更多实例操作"
           onClickCapture={(event) => {
             if (event.target instanceof Element && event.target.closest('button:not(:disabled)')) {
-              setOpen(false);
               // Capture the visible trigger before an action opens its confirmation dialog.
               trigger.current?.focus();
+            }
+          }}
+          onClick={(event) => {
+            if (event.target instanceof Element && event.target.closest('button:not(:disabled)')) {
+              // Let the action's click handler run before unmounting the menu.
+              setOpen(false);
             }
           }}
         >

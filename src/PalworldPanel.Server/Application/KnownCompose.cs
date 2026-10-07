@@ -32,9 +32,15 @@ public static class KnownCompose
                 expectedSource = SafePaths.Within(options.DockerHostRoot, Path.GetRelativePath(options.ContainerMountRoot, expectedSource));
             if (volumes[0]?["source"]?.GetValue<string>() != expectedSource) throw Unsupported();
             var ports = service["ports"]?.AsArray()?.Select(p => p?.GetValue<string>()).ToArray();
+            if (instance.Owned && instance.QueryPort <= 0) throw Unsupported();
             var gameAddress = options.DesktopValidation ? "127.0.0.1" : options.BindIp;
-            var expectedPorts = new[] { $"{gameAddress}:{instance.GamePort}:8211/udp", $"127.0.0.1:{instance.RestPort}:8212/tcp", $"{gameAddress}:{instance.QueryPort}:27015/udp" };
-            if (ports is null || !ports.Order().SequenceEqual(expectedPorts.Order())) throw Unsupported();
+            var expectedPorts = new List<string> { $"{gameAddress}:{instance.GamePort}:8211/udp", $"127.0.0.1:{instance.RestPort}:8212/tcp" };
+            if (instance.QueryPort > 0) expectedPorts.Add($"{gameAddress}:{instance.QueryPort}:27015/udp");
+            if (ports is null) throw Unsupported();
+            // Preserve an explicitly adopted server's existing UDP publication, including local forwarding.
+            var normalizedPorts = ports.Select(p => !instance.Owned && p == $"{instance.GamePort}:8211/udp"
+                ? $"{gameAddress}:{instance.GamePort}:8211/udp" : p);
+            if (!normalizedPorts.Order().SequenceEqual(expectedPorts.Order())) throw Unsupported();
             return document!;
         }
         catch (PanelException) { throw; }

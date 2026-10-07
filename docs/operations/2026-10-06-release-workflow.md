@@ -16,7 +16,7 @@ main 推送、PR、手动 CI 和 Release 复用都会校验 Linux/Windows 后端
 
 ## 正式发行
 
-Release 校验 tag 与说明 → 复用 CI → Linux Docker 镜像包 / Windows ZIP 和 Inno EXE → 精确检查三个文件 → SHA256SUMS → 发布 Release。预发布后缀自动标为 prerelease。只有 publish 作业有仓库写权限。发行包保持私有，下载需仓库权限；流水线不安装服务或游戏实例。
+Release 校验 tag 与说明 → 复用 CI → Linux Docker 镜像包 / Windows ZIP 和 Inno EXE → 精确检查三个文件 → SHA256SUMS → 发布 Release。预发布后缀自动标为 prerelease。只有 publish 作业有仓库写权限。发行包在组织仓库公开发布，可直接从 GitHub Releases 下载；流水线不安装服务或游戏实例。
 
 GitHub Release 正文直接读取带日期的版本说明。相同 tag 重跑会更新说明并覆盖同名资产；不要移动已公布 tag，用户须用新的 SHA256SUMS 核对。Actions 中间资产保留 7 天，不作为长期下载入口。
 

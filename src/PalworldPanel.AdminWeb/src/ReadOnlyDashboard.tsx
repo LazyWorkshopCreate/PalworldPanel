@@ -39,7 +39,15 @@ const states: Record<string, string> = {
   unknown: '未知',
 };
 
-export function ReadOnlyDashboard({ login }: { login: React.ReactNode }) {
+export function ReadOnlyDashboard({
+  login,
+  onLoginRequest,
+  management,
+}: {
+  login: React.ReactNode;
+  onLoginRequest?: () => void;
+  management?: React.ReactNode;
+}) {
   const [data, setData] = useState<Snapshot | null>(null);
   const [error, setError] = useState('');
   const [loginOpen, setLoginOpen] = useState(false);
@@ -80,17 +88,24 @@ export function ReadOnlyDashboard({ login }: { login: React.ReactNode }) {
           <button className="nav-active" aria-current="page">
             仪表盘
           </button>
+          {management}
         </nav>
-        <button ref={loginButton} className="primary" onClick={() => setLoginOpen(true)}>
-          登录
-        </button>
+        {!management && (
+          <button
+            ref={loginButton}
+            className="primary"
+            onClick={() => (onLoginRequest ? onLoginRequest() : setLoginOpen(true))}
+          >
+            登录
+          </button>
+        )}
       </header>
       <div className="page-scroll" role="region" aria-label="页面内容" tabIndex={0}>
         <main className="main">
           <div className="page-intro">
             <div>
               <h1>仪表盘</h1>
-              <p className="muted">只读查看 · 登录后可管理实例</p>
+              <p className="muted">{management ? '只读状态总览' : '只读查看 · 登录后可管理实例'}</p>
             </div>
             <span className="muted">更新时间：{time(data?.updatedUtc)}</span>
           </div>

@@ -82,6 +82,40 @@ public sealed class DockerBackend
         if (result.ExitCode != 0) throw new PanelException("DockerCommandFailed", "Docker 操作失败，请核实目标状态。", 409);
     }
 
+    public async Task UpdateInstallationAsync(InstanceRecord instance, string taskId, CancellationToken cancellation)
+    {
+        if (!Guid.TryParseExact(taskId, "N", out _)) throw new PanelException("InvalidTask", "任务标识无效。", 400);
+        var data = SafePaths.Within(instance.Root, "data");
+        if (options?.DockerHostRoot is { } host && options.ContainerMountRoot is { } mount)
+            data = SafePaths.Within(host, Path.GetRelativePath(mount, data));
+        if (data.Contains(',')) throw new PanelException("UnsupportedMount", "实例目录暂不支持逗号，请调整目录后重试。", 409);
+        var name = "pp-update-" + taskId;
+        try
+        {
+            await CommandAsync(["run", "--rm", "--pull", "never", "--name", name, "--mount", $"type=bind,source={data},target=/palworld",
+                "--env", "SERVER_PLATFORM=Linux", "--env", "USE_DEPOT_DOWNLOADER=true", "--env", "INSTALL_BETA_INSIDER=false",
+                "--env", "TARGET_MANIFEST_ID=", "--entrypoint", "/bin/bash", instance.Image, "-c",
+                "set -eo pipefail; source /home/steam/server/helper_install.sh; InstallServer"], TimeSpan.FromMinutes(30), cancellation: cancellation);
+        }
+        finally
+        {
+            await StopUpdaterAsync(taskId);
+        }
+    }
+
+    public async Task StopUpdaterAsync(string taskId)
+    {
+        if (!Guid.TryParseExact(taskId, "N", out _)) throw new PanelException("InvalidTask", "任务标识无效。", 400);
+        var name = "pp-update-" + taskId;
+        var cleanup = await RunAsync(["rm", "--force", name], TimeSpan.FromSeconds(30), cancellation: CancellationToken.None);
+        if (cleanup.ExitCode != 0)
+        {
+            var remaining = await RunAsync(["ps", "--all", "--quiet", "--filter", "name=^/" + name + "$"], TimeSpan.FromSeconds(10));
+            if (remaining.ExitCode != 0 || !string.IsNullOrWhiteSpace(remaining.Output))
+                throw new PanelException("UpdaterCleanupFailed", "更新进程未确认退出，请在任务页处理。", 409);
+        }
+    }
+
     public async Task ComposeAsync(InstanceRecord instance, string[] arguments, bool hold,
         CancellationToken cancellation = default, bool updateInstallation = false)
     {

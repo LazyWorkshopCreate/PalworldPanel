@@ -55,9 +55,17 @@ if __name__ == '__main__':
     run_action('start')
     print('PASS multi-world ZIP selection, ignored source Config, stopped import, verification gate and rollback', flush=True)
     current = json.loads(request('/api/v1/instances/' + instance_id)[1])
-    task = run_action('upgrade', {'mode':'image','image':current['image'], 'expectedGameBuild':current['gameBuild']}, 'NeedsAttention')
-    assert task['safeCode'] == 'PlayerVerificationPending'
-    assert recover(task)['state'] == 'RolledBack'
-    run_action('start')
+    status, raw, _ = request('/api/v1/instances/' + instance_id + '/update-check', 'POST', {}, {'X-CSRF-Token': login()})
+    assert status == 200, ('update-check', status)
+    update = json.loads(raw)
+    if update['status'] == 'available':
+        task = run_action('upgrade', {'updateToken': update['updateToken']}, 'NeedsAttention')
+        assert task['safeCode'] == 'PlayerVerificationPending'
+        assert recover(task)['state'] == 'RolledBack'
+    else:
+        assert update['status'] == 'up-to-date' and update['updateToken'] is None
+        print('PASS current installation does not create unnecessary upgrade', flush=True)
+    if update['status'] == 'available':
+        run_action('start')
     assert json.loads(request('/api/v1/instances/' + instance_id)[1])['worldGuid'] == original['worldGuid']
-    print('PASS pinned image upgrade, protected full installation backup, paired rollback and executable ownership', flush=True)
+    print('PASS update check and available-target upgrade/rollback branch; no simulated player acceptance', flush=True)

@@ -56,7 +56,7 @@ PalworldPanel 是面向单台服务器的幻兽帕鲁多实例 Web 管理面板�
 从 Releases 下载 Docker 镜像归档并校验，使用 `docker load` 导入。源码构建可执行：
 
 ```bash
-docker build --build-arg PANEL_VERSION=0.1.0-rc.1 -f deploy/Dockerfile -t palworldpanel:0.1.0-rc.1 .
+docker build --build-arg PANEL_VERSION=0.1.0-rc.2 -f deploy/Dockerfile -t palworldpanel:0.1.0-rc.2 .
 ```
 
 运行前需配置持久化目录、内网白名单、访问配置与 Docker socket，按[部署与恢复手册](docs/operations/2026-10-06-local-run-and-recovery.md)完成初始化。镜像本身不含实例存档或管理员凭据。
@@ -112,7 +112,7 @@ PalworldPanel/
 - [Windows 安装与维护](docs/operations/2026-10-06-windows-deployment-r4.md)
 - [本机部署与恢复](docs/operations/2026-10-06-local-run-and-recovery.md)
 - [流水线与发行](docs/operations/2026-10-06-release-workflow.md)
-- [版本说明](docs/releases/2026-10-06-v0.1.0-rc.1.md)
+- [版本说明](docs/releases/2026-10-07-v0.1.0-rc.2.md)
 - [真实验证记录](docs/verification/2026-10-06-desktop-implementation.md)
 - [贡献流程](CONTRIBUTING.md)
 

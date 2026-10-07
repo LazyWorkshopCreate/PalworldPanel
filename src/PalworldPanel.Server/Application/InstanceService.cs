@@ -19,22 +19,56 @@ public sealed class InstanceService(PanelOptions options, SqliteStore store, Sec
     public SqliteStore Store => store;
     public PanelOptions Options => options;
 
+    public async Task ValidateActionAsync(InstanceRecord instance, string kind, bool force, CancellationToken cancellation, string? executingTask = null)
+    {
+        if (store.Tasks("Queued").Concat(store.Tasks("Running")).Concat(store.Tasks("NeedsAttention"))
+            .Any(t => t.InstanceId == instance.Id && t.Id != executingTask))
+            throw new PanelException("TaskConflict", "实例有排队、执行中或待处理任务。", 409);
+        var action = kind == "stop" && force ? "force-stop" : kind;
+        if (!InstanceActionPolicy.Rules.TryGetValue(action, out var rule)) return;
+        var state = rule.States?.FirstOrDefault() ?? "unknown";
+        var reason = InstanceActionPolicy.DisabledReason(instance, action, state, "healthy");
+        if (reason is not null) throw new PanelException("ActionUnavailable", reason, 409);
+        if (rule.States is not null)
+        {
+            var container = await docker.ContainerIdAsync(instance, cancellation);
+            state = container is null ? "stopped" : (await docker.InspectAsync(container, cancellation)).GetProperty("State").GetProperty("Status").GetString() ?? "unknown";
+            var api = "unknown";
+            if (state == "running" && rule.Healthy)
+            {
+                try { await game.ReadAsync(instance, "info", cancellation); api = "healthy"; }
+                catch (Exception error) when (error is PanelException or HttpRequestException or TaskCanceledException) { }
+            }
+            reason = InstanceActionPolicy.DisabledReason(instance, action, state, api, containerPresent: container is not null);
+            if (reason is not null) throw new PanelException("ActionUnavailable", reason, 409);
+        }
+        if (kind == "start") await ValidateAvailableMemoryAsync(instance.Id, instance.Desired, cancellation);
+    }
+
     public async Task ValidateBudgetAsync(InstanceRecord current, GameRules rules, CancellationToken cancellation)
     {
         if (rules.MemoryMiB == current.Desired.MemoryMiB && rules.Cpu == current.Desired.Cpu) return;
         if (current.Owned && rules.MemoryMiB < options.MinimumMemoryMiB) throw new PanelException("MemoryBelowMinimum", "实例内存低于最低预算。", 400);
         if (current.Owned && !options.DesktopValidation && rules.Cpu < 4) throw new PanelException("CpuBelowMinimum", "新实例至少配置 4 CPU。", 400);
         if (rules.MemoryMiB <= current.Desired.MemoryMiB && rules.Cpu <= current.Desired.Cpu) return;
-        var info = await docker.RunAsync(["info", "--format", "{{.MemTotal}} {{.NCPU}}"], TimeSpan.FromSeconds(10), cancellation: cancellation);
-        if (info.ExitCode != 0) throw new PanelException("DockerUnavailable", "Docker 不可访问。", 503);
-        var values = info.Output.Trim().Split(' ');
-        var others = store.Instances().Where(i => i.Id != current.Id && i.QuarantinedUtc is null && i.ResourceBudgetKnown).ToArray();
-        var external = await ExternalBudgetAsync(cancellation);
-        if (!options.DesktopValidation && external.UnlimitedRunning > 0)
-            throw new PanelException("ResourceBudgetUnknown", "存在未设置内存上限的外部容器，容量不能可靠预检。", 409);
-        if (others.Sum(i => i.Desired.MemoryMiB) + external.Memory + rules.MemoryMiB > long.Parse(values[0], CultureInfo.InvariantCulture) / 1024 / 1024 - options.ReservedMemoryMiB ||
-            others.Sum(i => i.Desired.Cpu) + external.Cpu + rules.Cpu > Math.Max(1, int.Parse(values[1], CultureInfo.InvariantCulture) - 2))
-            throw new PanelException("ResourceBudgetExceeded", "实例承诺资源超过宿主预算。", 409);
+        if (rules.Cpu > current.Desired.Cpu)
+        {
+            var capacity = await docker.RunAsync(["info", "--format", "{{.NCPU}}"], TimeSpan.FromSeconds(10), cancellation: cancellation);
+            if (capacity.ExitCode != 0) throw new PanelException("DockerUnavailable", "Docker 不可访问。", 503);
+            if (rules.Cpu > Math.Max(1, int.Parse(capacity.Output.Trim(), CultureInfo.InvariantCulture) - 2))
+                throw new PanelException("ResourceBudgetExceeded", "CPU 配额超过主机可用容量。", 409);
+        }
+        await ValidateAvailableMemoryAsync(current.Id, rules, cancellation);
+    }
+
+    public async Task ValidateAvailableMemoryAsync(string? instanceId, GameRules rules, CancellationToken cancellation)
+    {
+        var measured = await RuntimeMemory.ReadAsync(docker, options, cancellation);
+        var physical = hostMetrics.Sample(refresh: true);
+        var available = OperatingSystem.IsWindows() && physical.AvailableMemoryBytes is { } free
+            ? Math.Min(free, measured.AvailableBytes) : measured.AvailableBytes;
+        var pending = RuntimeMemory.PendingMiB(store.Tasks("Queued").Concat(store.Tasks("Running")), store.Instances(), instanceId);
+        RuntimeMemory.Check(available, rules.MemoryMiB, options.ReservedMemoryMiB, pending);
     }
 
     public async Task<object> HostAsync(CancellationToken cancellation = default)
@@ -46,7 +80,9 @@ public sealed class InstanceService(PanelOptions options, SqliteStore store, Sec
         var cpu = int.Parse(values[1], CultureInfo.InvariantCulture);
         var external = await ExternalBudgetAsync(cancellation);
         var measured = hostMetrics.Sample();
+        var runtime = await RuntimeMemory.ReadAsync(docker, options, cancellation);
         return new { memoryMiB = memory, cpuCount = cpu, reservedMemoryMiB = options.ReservedMemoryMiB,
+            runtimeUsedMemoryBytes = runtime.UsedBytes, runtimeAvailableMemoryBytes = runtime.AvailableBytes,
             measured.UsedMemoryBytes, measured.AvailableMemoryBytes, measured.CpuPercent, systemSampleUtc = measured.UpdatedUtc,
             systemMemoryBytes = measured.TotalMemoryBytes, systemCpuCount = measured.CpuCount,
             committedMemoryMiB = store.Instances().Where(i => i.QuarantinedUtc is null && i.ResourceBudgetKnown).Sum(i => i.Desired.MemoryMiB) + external.Memory,
@@ -80,12 +116,9 @@ public sealed class InstanceService(PanelOptions options, SqliteStore store, Sec
         var host = info.Output.Trim().Split(' ');
         var memory = long.Parse(host[0], CultureInfo.InvariantCulture) / 1024 / 1024;
         var cpu = int.Parse(host[1], CultureInfo.InvariantCulture);
-        var external = await ExternalBudgetAsync(cancellation);
-        if (!options.DesktopValidation && external.UnlimitedRunning > 0)
-            throw new PanelException("ResourceBudgetUnknown", "存在未设置内存上限的外部容器，请先核实预算。", 409);
-        if (store.Instances().Where(i => i.QuarantinedUtc is null && i.ResourceBudgetKnown).Sum(i => i.Desired.MemoryMiB) + external.Memory + rules.MemoryMiB > memory - options.ReservedMemoryMiB ||
-            store.Instances().Where(i => i.QuarantinedUtc is null && i.ResourceBudgetKnown).Sum(i => i.Desired.Cpu) + external.Cpu + rules.Cpu > Math.Max(1, cpu - 2))
-            throw new PanelException("ResourceBudgetExceeded", "实例承诺资源超过宿主预算。", 409);
+        await ValidateAvailableMemoryAsync(null, rules, cancellation);
+        if (rules.Cpu > Math.Max(1, cpu - 2))
+            throw new PanelException("ResourceBudgetExceeded", "CPU 配额超过主机可用容量。", 409);
         var root = SafePaths.Within(options.InstanceRoots[0], id);
         SafePaths.EnsureIndependent(root, store.Instances().Select(i => i.Root));
         if (Directory.Exists(root)) throw new PanelException("InstanceRootExists", "目标目录已经存在。", 409);
@@ -99,6 +132,8 @@ public sealed class InstanceService(PanelOptions options, SqliteStore store, Sec
         if (cloneId is not null)
         {
             var source = store.Instance(cloneId);
+            using var sourceLock = DiskLock.AcquireInstance(options.StateRoot, source.Root, source.Id);
+            await ValidateActionAsync(source, "clone", false, cancellation);
             if (!source.Owned && source.SourceHash is null) throw new PanelException("UnknownCloneSource", "源配置尚未核实，不能克隆默认值。", 409);
             rules = source.Desired with { Name = rules.Name, Cpu = rules.Cpu, MemoryMiB = rules.MemoryMiB };
             cloneRevision = source.Revision;
@@ -213,7 +248,7 @@ public sealed class InstanceService(PanelOptions options, SqliteStore store, Sec
         queryPort = i.QueryPort > 0 ? (int?)i.QueryPort : null, i.Revision, i.Writable, i.Owned, i.WorldGuid,
         i.Desired, i.Applied, i.BackupTime, i.RetentionDays, i.DesiredPower, i.GameBuild, i.QuarantinedUtc, i.PurgedUtc,
         configurationKnown = i.Owned || i.SourceHash is not null,
-        i.ResourceBudgetKnown,
+        i.ResourceBudgetKnown, draftPending = InstanceActionPolicy.HasPendingDraft(i),
         gamePasswordConfigured = SecretVault.IsConfigured(i.GameCipher), administratorConfigured = SecretVault.IsConfigured(i.AdminCipher) };
 
     private sealed class Sample
@@ -295,7 +330,7 @@ public sealed class InstanceService(PanelOptions options, SqliteStore store, Sec
                 catch (TaskCanceledException) { }
             }
         }
-        return new { container = state, gameApi, gameEndpoint = "unknown", updatedUtc = DateTimeOffset.UtcNow,
+        return new { container = state, containerPresent = id is not null, gameApi, gameEndpoint = "unknown", updatedUtc = DateTimeOffset.UtcNow,
             worldGuid = Field(info, "worldguid"), gameBuild = Field(info, "version"),
             players = Field(metrics, "currentplayernum"), fps = Field(metrics, "serverfps"),
             days = Field(metrics, "days"), bases = Field(metrics, "basecampnum"),
@@ -319,7 +354,8 @@ public sealed class InstanceService(PanelOptions options, SqliteStore store, Sec
         return null;
     }
 
-    public string SourceHash(InstanceRecord instance)
+    public string SourceHash(InstanceRecord instance) => "v2:" + SourceHashCore(instance, true);
+    private string SourceHashCore(InstanceRecord instance, bool canonical)
     {
         var bytes = new List<byte>();
         foreach (var file in new[] { "compose.yaml", "settings.env", "secrets.env" })
@@ -334,22 +370,44 @@ public sealed class InstanceService(PanelOptions options, SqliteStore store, Sec
         {
             var gameConfig = SafePaths.Within(instance.Root, GameSettingsFile.RelativePath);
             if (!File.Exists(gameConfig)) throw new PanelException("SourceMissing", "世界配置源缺失。", 409);
-            bytes.AddRange(File.ReadAllBytes(gameConfig));
+            bytes.AddRange(canonical ? Encoding.UTF8.GetBytes(GameSettingsFile.CanonicalSource(File.ReadAllText(gameConfig))) : File.ReadAllBytes(gameConfig));
         }
         return Convert.ToHexString(SHA256.HashData(bytes.ToArray()));
+    }
+
+    public void MigrateSourceHashes()
+    {
+        var active = store.Tasks("Queued").Concat(store.Tasks("Running")).Concat(store.Tasks("NeedsAttention"))
+            .Select(t => t.InstanceId).ToHashSet();
+        foreach (var instance in store.Instances().Where(i => i.SourceHash is not null && !i.SourceHash.StartsWith("v2:", StringComparison.Ordinal) && !active.Contains(i.Id)))
+        {
+            try
+            {
+                CheckRoot(instance);
+                // Never adopt a changed source implicitly, including during migration.
+                if (SourceHashCore(instance, false) == instance.SourceHash)
+                    store.SaveInstance(instance with { SourceHash = SourceHash(instance) });
+            }
+            catch (PanelException) { /* Missing or invalid sources remain blocked. */ }
+            catch (IOException) { /* Retired/unavailable sources remain blocked. */ }
+        }
     }
 
     public void CheckSource(InstanceRecord instance)
     {
         CheckRoot(instance);
-        if (instance.SourceHash is null || SourceHash(instance) != instance.SourceHash)
+        var actual = instance.SourceHash?.StartsWith("v2:", StringComparison.Ordinal) == true ? SourceHash(instance) : SourceHashCore(instance, false);
+        if (instance.SourceHash is null || actual != instance.SourceHash)
             throw new PanelException("SourceDrift", "配置源已变化，请重新核实接管。", 409);
     }
     public void CheckRoot(InstanceRecord instance) => SafePaths.EnsureApproved(instance.Root, options.InstanceRoots);
 
     public void CheckDisk(string path, long requiredBytes)
     {
-        var volume = new DriveInfo(Path.GetFullPath(path));
+        var existingPath = Path.GetFullPath(path);
+        while (!Directory.Exists(existingPath))
+            existingPath = Path.GetDirectoryName(existingPath) ?? throw new PanelException("StorageUnavailable", "无法访问实例目录所在的磁盘。", 503);
+        var volume = new DriveInfo(existingPath);
         var margin = Math.Max(10L << 30, volume.TotalSize / 10);
         if (volume.AvailableFreeSpace - requiredBytes < margin) throw new PanelException("InsufficientStorage", "磁盘不足以保留恢复点与安全余量。", 507);
     }
@@ -366,7 +424,7 @@ public sealed class InstanceService(PanelOptions options, SqliteStore store, Sec
         var ports = store.Instances().Where(i => i.QuarantinedUtc is null).SelectMany(i => new[] { i.GamePort, i.RestPort, i.QueryPort }).ToHashSet();
         foreach (var container in await docker.ContainersAsync(cancellation))
         {
-            if (!container.TryGetProperty("HostConfig", out var host) || !host.TryGetProperty("PortBindings", out var bindings)) continue;
+            if (!container.TryGetProperty("HostConfig", out var host) || !host.TryGetProperty("PortBindings", out var bindings) || bindings.ValueKind != JsonValueKind.Object) continue;
             foreach (var binding in bindings.EnumerateObject())
             {
                 if (binding.Value.ValueKind != JsonValueKind.Array) continue;

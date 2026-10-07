@@ -201,20 +201,32 @@ public static class PanelEndpoints
             service.Store.Audit(User(context), id, "settings-draft", "Succeeded");
             return Results.Ok(InstanceService.View(updated));
         });
-        api.MapPost("/instances/{id}/previews", (string id, ActionRequest request, HttpContext context,
-            InstanceService service, ConfirmationTokens tokens) =>
+        api.MapPost("/instances/{id}/update-check", async (string id, InstanceService service, GameUpdateService updates, CancellationToken ct) =>
+        {
+            var instance = service.Store.Instance(id);
+            service.CheckRoot(instance);
+            using var instanceLock = DiskLock.AcquireInstance(service.Options.StateRoot, instance.Root, instance.Id);
+            instance = service.Store.Instance(id);
+            await service.ValidateActionAsync(instance, "upgrade", false, ct);
+            service.CheckSource(instance);
+            return Results.Ok(await updates.CheckAsync(instance, ct));
+        });
+        api.MapPost("/instances/{id}/previews", async (string id, ActionRequest request, HttpContext context,
+            InstanceService service, ConfirmationTokens tokens, GameUpdateService updates, CancellationToken ct) =>
         {
             CheckAction(request.Kind);
             var instance = service.Store.Instance(id);
+            await service.ValidateActionAsync(instance, request.Kind, IsForce(request), ct);
             if (request.Kind is not ("unmanage" or "undo-quarantine" or "finalize-purge")) service.CheckSource(instance);
+            if (request.Kind == "upgrade") await updates.ValidateAsync(instance, request.Arguments, ct);
             var hash = PreviewHash(instance, request);
             var preview = tokens.Issue(User(context), id, request.Kind, instance.Revision, hash);
             return Results.Ok(new { preview.Token, hash, instance.Revision, instance.WorldGuid,
                 root = instance.Root, backups = Path.Combine(service.Options.BackupRoot, instance.Id),
                 instance.GameBuild, expiresUtc = preview.ExpiresUtc, stopsInstance = request.Kind is not ("start" or "save" or "unmanage") });
         });
-        api.MapPost("/instances/{id}/actions", (string id, ActionRequest request, HttpContext context,
-            InstanceService service, ConfirmationTokens tokens) =>
+        api.MapPost("/instances/{id}/actions", async (string id, ActionRequest request, HttpContext context,
+            InstanceService service, ConfirmationTokens tokens, GameUpdateService updates, CancellationToken ct) =>
         {
             CheckAction(request.Kind);
             AdministratorSecurity.RequireRecent(context.User);
@@ -236,6 +248,9 @@ public static class PanelEndpoints
             instance = service.Store.Instance(id);
             hash = PreviewHash(instance, request);
             Match(context, instance);
+            using var allocationLock = request.Kind == "start" ? DiskLock.Acquire(Path.Combine(service.Options.StateRoot, "allocation.lock")) : null;
+            await service.ValidateActionAsync(instance, request.Kind, IsForce(request), ct);
+            if (request.Kind == "upgrade") await updates.ValidateAsync(instance, request.Arguments, ct);
             tokens.Consume(request.Confirmation ?? "", User(context), id, request.Kind, instance.Revision, hash);
             if (request.PreviewHash != hash) throw new PanelException("PreviewChanged", "预览内容已变化。", 409);
             if (request.Kind is not ("unmanage" or "undo-quarantine" or "finalize-purge")) service.CheckSource(instance);
@@ -358,6 +373,8 @@ public static class PanelEndpoints
     private static string Key(HttpContext context) => context.Request.Headers["Idempotency-Key"].ToString();
     private static void CheckAction(string action)
     { if (!Actions.Contains(action)) throw new PanelException("UnsupportedAction", "操作不受支持。", 400); }
+    private static bool IsForce(ActionRequest request) => request.Arguments is { } arguments &&
+        arguments.TryGetProperty("force", out var force) && force.ValueKind == JsonValueKind.True;
     private static void Match(HttpContext context, InstanceRecord instance)
     {
         if (context.Request.Headers.IfMatch.ToString().Trim('"') != instance.Revision.ToString(System.Globalization.CultureInfo.InvariantCulture))

@@ -9,11 +9,11 @@ public sealed class HostMetrics
     private readonly object gate = new();
     private HostSample? last;
     private (long Total, long Idle)? counters;
-    public HostSample Sample()
+    public HostSample Sample(bool refresh = false)
     {
         lock (gate)
         {
-            if (last is not null && DateTimeOffset.UtcNow - last.UpdatedUtc < TimeSpan.FromSeconds(5)) return last;
+            if (!refresh && last is not null && DateTimeOffset.UtcNow - last.UpdatedUtc < TimeSpan.FromSeconds(5)) return last;
             long? used = null, available = null;
             long? totalMemory = null;
             double? cpu = null;

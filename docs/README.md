@@ -1,6 +1,6 @@
 # PalworldPanel 文档导航
 
-日期：2026-10-06（北京时间）。状态：本机实现与 Docker Desktop 隔离验证交付完成；生产部署与既有实例写接管未授权。实际结果见[实现与本机验证](verification/2026-10-06-desktop-implementation.md)。
+日期：2026-10-07（北京时间）。状态：本机实现与 Docker Desktop 验证完成；示例 Linux 主机 部署及两台既有实例写接管已获授权并完成，实际结果和未验证边界见 [Linux 验收](verification/2026-10-07-linux-acceptance.md)。历史本机结果见[实现与本机验证](verification/2026-10-06-desktop-implementation.md)。
 
 ## 推荐结论
 
@@ -18,6 +18,9 @@
 
 | 文档 | 用途 |
 |---|---|
+| [v0.1.0-rc.2 版本说明](releases/2026-10-07-v0.1.0-rc.2.md) | URL 路由、更新检查、操作互斥、实时内存准入与 Linux 接管修复 |
+| [rc.2 发行验证](verification/2026-10-07-rc2-release.md) | 公开仓库发行流水线、资产校验与仅 tag 网站部署 |
+| [示例 Linux 主机 Linux 接管与验收](verification/2026-10-07-linux-acceptance.md) | 管理员初始化、两实例完整接管、Linux API/UI 流程、修复与验证边界 |
 | [官网双语设计](design/2026-10-06-website-languages.md) | 中英内容来源、对应页切换与翻译维护 |
 | [官网双语验证](verification/2026-10-06-website-languages.md) | 12 页静态检查、48 组响应式检查及发布边界 |
 | [公开文档与日志设计](design/2026-10-06-public-documentation.md) | 独立列表/详情、公开内容生成与站内导航 |
@@ -81,3 +84,11 @@
 [本机实例生命周期验收](verification/2026-10-07-lifecycle-acceptance.md)：API、浏览器与 Windows/Docker 隔离实例的操作和修复证据。
 
 - [公开仓库与发布约定](operations/2026-10-07-public-release.md)
+- [实例操作栏状态与互斥验收](verification/2026-10-07-instance-action-controls.md)
+- 控制台 URL 路由：[需求](requirements/2026-10-07-console-routing.md)、[设计](design/2026-10-07-console-routing.md)、[计划](planning/2026-10-07-console-routing.md)、[验收](verification/2026-10-07-console-routing.md)
+
+[实例更新需求](requirements/2026-10-07-instance-updates.md) / [设计](design/2026-10-07-instance-updates.md) / [计划](planning/2026-10-07-instance-updates.md) / [验收](verification/2026-10-07-instance-updates.md)：REQ-19 / W23，替代手动技术升级弹窗。
+
+[内存展示与检查](requirements/2026-10-07-memory-admission.md) / [设计](design/2026-10-07-memory-admission.md) / [计划](planning/2026-10-07-memory-admission.md) / [验收](verification/2026-10-07-memory-admission.md)：REQ-20 / W24，按实时可用内存准入。
+
+- [示例 Linux 主机 初次部署快照](operations/2026-10-07-linux-deployment.md)：初次部署时的只读范围；后续两台既有实例写接管及当前状态见 [Linux 验收](verification/2026-10-07-linux-acceptance.md)。

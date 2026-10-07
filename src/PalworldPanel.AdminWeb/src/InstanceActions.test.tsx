@@ -50,12 +50,13 @@ it.each(['Queued', 'Running', 'NeedsAttention'])(
   async (state) => {
     mockApplication(state);
     render(<App />);
-    await userEvent.click(await screen.findByRole('button', { name: '查看实例' }));
+    await userEvent.click(await screen.findByRole('link', { name: '查看实例' }));
     for (const name of ['启动', '停止', '离线备份']) {
       expect(screen.getByRole('button', { name })).toBeDisabled();
     }
     await userEvent.click(screen.getByRole('button', { name: '更多' }));
     for (const name of [
+      '仅克隆规则',
       '重启',
       '保存',
       '强制停止',
@@ -73,6 +74,27 @@ it.each(['Queued', 'Running', 'NeedsAttention'])(
     ).toBe(false);
   },
 );
+
+it.each([
+  ['移除容器保留数据', 'retain-data'],
+  ['隔离清理', 'purge'],
+  ['取消接管', 'unmanage'],
+])('更多中的 %s 打开确认弹窗并关闭菜单', async (label, kind) => {
+  mockApplication();
+  render(<App />);
+  await userEvent.click(await screen.findByRole('link', { name: '查看实例' }));
+  await userEvent.click(screen.getByRole('button', { name: '更多' }));
+  await userEvent.click(screen.getByRole('button', { name: label }));
+  expect(await screen.findByRole('dialog')).toHaveTextContent(`确认${label}`);
+  expect(screen.queryByRole('group', { name: '更多实例操作' })).not.toBeInTheDocument();
+  await waitFor(() =>
+    expect(vi.mocked(api)).toHaveBeenCalledWith(
+      '/instances/synthetic/previews',
+      expect.objectContaining({ body: JSON.stringify({ kind }) }),
+    ),
+  );
+  expect(vi.mocked(api).mock.calls.some(([path]) => path.endsWith('/actions'))).toBe(false);
+});
 
 function mockApplication(initialState?: string) {
   const task = {
@@ -121,10 +143,40 @@ function mockApplication(initialState?: string) {
   return task;
 }
 
+it('收到任务回执后立即锁定全部操作，刷新暂未返回任务时保持锁定，终态释放', async () => {
+  const task = mockApplication();
+  const original = vi.mocked(api).getMockImplementation()!;
+  let listLagging = true;
+  vi.mocked(api).mockImplementation(async (path, options) => {
+    if (path === '/tasks' && listLagging) return [];
+    return original(path, options);
+  });
+  render(<App />);
+  await userEvent.click(await screen.findByRole('link', { name: '查看实例' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: '启动' })).toBeEnabled());
+  await userEvent.click(screen.getByRole('button', { name: '启动' }));
+  const dialog = await screen.findByRole('dialog');
+  await waitFor(() =>
+    expect(within(dialog).getByRole('button', { name: '确认启动' })).toBeEnabled(),
+  );
+  await userEvent.dblClick(within(dialog).getByRole('button', { name: '确认启动' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  expect(screen.getByRole('button', { name: '启动' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: '离线备份' })).toBeDisabled();
+  await userEvent.click(screen.getByRole('button', { name: '更多' }));
+  expect(screen.getByRole('button', { name: '仅克隆规则' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: '取消接管' })).toBeDisabled();
+  expect(vi.mocked(api).mock.calls.filter(([path]) => path.endsWith('/actions'))).toHaveLength(1);
+  listLagging = false;
+  task.state = 'Succeeded';
+  await userEvent.click(screen.getByRole('button', { name: '刷新' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: '启动' })).toBeEnabled());
+});
+
 it('应用从确认到后台成功保持锁定，需要处理也不释放，成功后恢复', async () => {
   const task = mockApplication();
   render(<App />);
-  await userEvent.click(await screen.findByRole('button', { name: '查看实例' }));
+  await userEvent.click(await screen.findByRole('link', { name: '查看实例' }));
   await userEvent.click(screen.getByRole('tab', { name: '设置' }));
   await userEvent.click(screen.getByRole('button', { name: '应用并重启' }));
   expect(screen.getByText('等待确认…').closest('button')).toBeDisabled();
@@ -149,7 +201,7 @@ it.each(['Queued', 'Running', 'NeedsAttention'])(
   async (state) => {
     mockApplication(state);
     render(<App />);
-    await userEvent.click(await screen.findByRole('button', { name: '查看实例' }));
+    await userEvent.click(await screen.findByRole('link', { name: '查看实例' }));
     await userEvent.click(screen.getByRole('tab', { name: '设置' }));
     expect(
       screen.getByRole('button', { name: state === 'NeedsAttention' ? '应用需处理' : '应用中…' }),
@@ -196,7 +248,7 @@ it('导出弹窗保留口令校验、取消不导出，提交错误在弹窗内�
     throw new Error('Unexpected synthetic request');
   });
   render(<App />);
-  await userEvent.click(await screen.findByRole('button', { name: '查看实例' }));
+  await userEvent.click(await screen.findByRole('link', { name: '查看实例' }));
   await userEvent.click(screen.getByRole('tab', { name: '备份与恢复' }));
   await userEvent.click(await screen.findByRole('button', { name: '加密导出' }));
   let dialog = screen.getByRole('dialog');
@@ -250,18 +302,26 @@ it.each([
       };
     if (['/tasks', '/backups', '/audit'].includes(path)) return [];
     if (path.endsWith('/observations'))
-      return { container: 'stopped', gameApi: 'unknown', stale: false };
-    if (path === '/capabilities') return { approvedImages: ['synthetic-image'] };
+      return {
+        container: name === '启动' ? 'stopped' : 'running',
+        gameApi: 'healthy',
+        stale: false,
+      };
+    if (path.endsWith('/update-check'))
+      return { status: 'up-to-date', currentVersion: 'v1.0.5', targetVersion: 'v1.0.5' };
     if (path.endsWith('/previews')) return { token: 'synthetic-token', hash: 'synthetic-hash' };
     throw new Error('Unexpected synthetic request');
   });
   render(<App />);
-  await userEvent.click(await screen.findByRole('button', { name: '查看实例' }));
+  await userEvent.click(await screen.findByRole('link', { name: '查看实例' }));
   if (more) await userEvent.click(screen.getByRole('button', { name: '更多' }));
+  await waitFor(() => expect(screen.getByRole('button', { name })).toBeEnabled());
   await userEvent.click(screen.getByRole('button', { name }));
   const dialog = await screen.findByRole('dialog');
-  expect(dialog).toHaveTextContent(name === '升级' ? '升级范围' : name);
-  await userEvent.click(within(dialog).getByRole('button', { name: '取消' }));
+  expect(dialog).toHaveTextContent(name === '升级' ? '检查游戏更新' : name);
+  await userEvent.click(
+    within(dialog).getByRole('button', { name: name === '升级' ? '关闭' : '取消' }),
+  );
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(
     vi

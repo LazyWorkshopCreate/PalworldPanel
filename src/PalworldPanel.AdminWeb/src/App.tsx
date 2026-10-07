@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Modal } from './Modal';
+import { UpgradeDialog } from './UpgradeDialog';
 import { ActionConfirmation, type ActionRequest } from './ActionConfirmation';
 import { PasswordDialog } from './PasswordDialog';
 import { PasswordStatusTable, type InstancePasswordStates } from './PasswordStatusTable';
 import { MoreActions } from './MoreActions';
+import { actionState, type ActionKind } from './instanceActionPolicy';
 import { ParameterSettings } from './ParameterSettings';
 import { ReadOnlyDashboard } from './ReadOnlyDashboard';
 import { InstanceInitialization } from './InstanceInitialization';
@@ -19,6 +21,14 @@ import {
 } from 'lucide-react';
 import { api, ApiError, commandKey, setCsrf, downloadEncryptedBackup } from './api';
 import './styles.css';
+import {
+  usePanelRoute,
+  RouteLink,
+  instancePath,
+  loginPath,
+  safeReturnPath,
+  type InstanceTab,
+} from './router';
 
 type Rules = {
   name: string;
@@ -59,6 +69,7 @@ type Instance = {
   gamePort: number | null;
   gameAddress?: string | null;
   desiredPower: string;
+  draftPending?: boolean;
   desired: Rules;
   applied: Rules | null;
 };
@@ -76,6 +87,8 @@ type TaskItem = {
 type Host = {
   systemMemoryBytes?: number | null;
   systemCpuCount?: number | null;
+  runtimeUsedMemoryBytes?: number | null;
+  runtimeAvailableMemoryBytes?: number | null;
   usedMemoryBytes: number | null;
   availableMemoryBytes: number | null;
   cpuPercent: number | null;
@@ -90,6 +103,8 @@ type Host = {
   reservedMemoryMiB: number;
 };
 type Observation = {
+  instanceId?: string;
+  containerPresent?: boolean;
   publishedUdp: { address: string; port: string }[] | null;
   containerUdp: string;
   hostUdp: string;
@@ -370,17 +385,21 @@ export function App() {
   const [session, setSession] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(true);
   const [setupRequired, setSetupRequired] = useState(false);
-  const [setupFinished, setSetupFinished] = useState(false);
   const [setupLoadFailed, setSetupLoadFailed] = useState(false);
   const [instances, setInstances] = useState<Instance[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [pendingActions, setPendingActions] = useState<Record<string, string>>({});
   const [pendingApplications, setPendingApplications] = useState<Record<string, string>>({});
   const [host, setHost] = useState<Host | null>(null);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
   const [error, setError] = useState('');
-  const [page, setPage] = useState('instances');
-  const [selected, setSelected] = useState<string | null>(null);
-  const [tab, setTab] = useState('overview');
+  const { route, location, navigate } = usePanelRoute();
+  const page = route.page;
+  const selected = route.instanceId;
+  const tab = route.tab;
+  const setTab = (next: string) =>
+    selected && navigate(instancePath(selected, next as InstanceTab));
+  const [instancesLoaded, setInstancesLoaded] = useState(false);
   const [observed, setObserved] = useState<Observation | null>(null);
   const [backups, setBackups] = useState<Backup[]>([]);
   const [allBackups, setAllBackups] = useState<(Backup & { instanceId: string })[]>([]);
@@ -416,10 +435,6 @@ export function App() {
   }, [createOpen]);
   const [cloneId, setCloneId] = useState<string | null>(null);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
-  const [approvedImages, setApprovedImages] = useState<string[]>([]);
-  const [upgradeImage, setUpgradeImage] = useState('');
-  const [upgradeMode, setUpgradeMode] = useState('image');
-  const [expectedBuild, setExpectedBuild] = useState('');
   const [adoptOpen, setAdoptOpen] = useState(false);
   const [externalSchedulesConfirmed, setExternalSchedulesConfirmed] = useState(false);
   const [discovered, setDiscovered] = useState<Candidate[] | null>(null);
@@ -470,10 +485,13 @@ export function App() {
   }, [selected]);
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const instance = instances.find((i) => i.id === selected);
-  const instanceTaskLocked = tasks.some(
-    (task) =>
-      task.instanceId === selected && ['Queued', 'Running', 'NeedsAttention'].includes(task.state),
-  );
+  const instanceTaskLocked =
+    !!pendingActions[selected || ''] ||
+    tasks.some(
+      (task) =>
+        task.instanceId === selected &&
+        ['Queued', 'Running', 'NeedsAttention'].includes(task.state),
+    );
   const applicationTask = tasks.find(
     (task) =>
       task.instanceId === selected &&
@@ -487,6 +505,18 @@ export function App() {
       (!!applicationTask &&
         ['Queued', 'Running', 'NeedsAttention'].includes(applicationTask.state)) ||
       (confirmation?.kind === 'apply-config' && confirmation.instance.id === instance.id));
+  const controlProps = (kind: ActionKind) =>
+    actionState(
+      instance!,
+      kind,
+      observed?.instanceId === instance?.id ? observed : null,
+      busy ||
+        instanceTaskLocked ||
+        !!confirmation ||
+        !!cloneConfirmation ||
+        upgradeOpen ||
+        adoptOpen,
+    );
   const initializationTask = (id: string) =>
     tasks.find((task) => task.instanceId === id && task.kind === 'create');
   const loadSession = useCallback(async () => {
@@ -494,6 +524,10 @@ export function App() {
     setCsrf(result.csrfToken);
     setSession(result.userName);
   }, []);
+  const loginComplete = async () => {
+    await loadSession();
+    navigate(safeReturnPath(new URLSearchParams(window.location.search).get('returnTo')), true);
+  };
   const refresh = useCallback(async () => {
     try {
       const [items, jobs, capacity, recoveryPoints, auditEntries] = await Promise.all([
@@ -504,7 +538,20 @@ export function App() {
         api<AuditEntry[]>('/audit'),
       ]);
       setInstances(items);
+      setInstancesLoaded(true);
       setTasks(jobs);
+      setPendingActions((previous) =>
+        Object.fromEntries(
+          Object.entries(previous).filter(
+            ([, id]) =>
+              !jobs.some(
+                (task) =>
+                  task.id === id &&
+                  ['Succeeded', 'Failed', 'Cancelled', 'RolledBack'].includes(task.state),
+              ),
+          ),
+        ),
+      );
       setPendingApplications((previous) =>
         Object.fromEntries(
           Object.entries(previous).filter(
@@ -562,16 +609,16 @@ export function App() {
     const controller = new AbortController();
     const load = async () => {
       try {
-        if (tab === 'overview')
-          setObserved(
-            await api<Observation>(`/instances/${instance.id}/observations`, {
-              signal: controller.signal,
-            }),
-          );
-        if (tab === 'backups')
-          setBackups(
-            await api<Backup[]>(`/instances/${instance.id}/backups`, { signal: controller.signal }),
-          );
+        const observation = await api<Observation>(`/instances/${instance.id}/observations`, {
+          signal: controller.signal,
+        });
+        if (!controller.signal.aborted) setObserved({ ...observation, instanceId: instance.id });
+        if (tab === 'backups') {
+          const points = await api<Backup[]>(`/instances/${instance.id}/backups`, {
+            signal: controller.signal,
+          });
+          if (!controller.signal.aborted) setBackups(points);
+        }
         if (tab === 'settings') {
           const settings = await api<Omit<NonNullable<typeof settingsObserved>, 'instanceId'>>(
             `/instances/${instance.id}/settings`,
@@ -584,10 +631,15 @@ export function App() {
           const data = await api<{ text: string }>(`/instances/${instance.id}/logs`, {
             signal: controller.signal,
           });
-          setLogs(data.text);
+          if (!controller.signal.aborted) setLogs(data.text);
         }
       } catch (e) {
-        if (!controller.signal.aborted) setError(errorText(e));
+        if (!controller.signal.aborted) {
+          setObserved((previous) =>
+            previous?.instanceId === instance.id ? { ...previous, stale: true } : previous,
+          );
+          setError(errorText(e));
+        }
       }
     };
     void load();
@@ -598,8 +650,66 @@ export function App() {
     };
   }, [instance?.id, tab, session]);
 
+  useEffect(() => {
+    if (initializing || setupLoadFailed) return;
+    if (setupRequired && route.page !== 'setup') navigate('/setup', true);
+    else if (!setupRequired && route.page === 'home')
+      navigate(session ? '/instances' : '/dashboard', true);
+    else if (!setupRequired && route.page === 'setup') navigate('/login', true);
+    else if (session && route.page === 'login')
+      navigate(safeReturnPath(new URLSearchParams(window.location.search).get('returnTo')), true);
+    else if (!session && !setupRequired && ['instances', 'host'].includes(route.page))
+      navigate(loginPath(route.path), true);
+    else if (window.location.pathname !== route.path && route.page !== 'login')
+      navigate(route.path, true);
+  }, [initializing, setupLoadFailed, setupRequired, session, location]);
+
+  useEffect(() => {
+    if (instance && tab === 'settings') setDraft(instance.desired);
+  }, [instance?.id, tab]);
+
+  useEffect(() => {
+    setConfirmation(null);
+    setCloneConfirmation(null);
+    setCreateOpen(false);
+    setUpgradeOpen(false);
+    setAdoptOpen(false);
+    setDiscovered(null);
+    setSecretEditing(null);
+    setExportBackup(null);
+    setRecovery(null);
+    setZipPreview(null);
+    setSettingsSearch('');
+    setLogs('');
+    setBackups([]);
+  }, [location]);
+
+  useEffect(() => {
+    const titles: Record<string, string> = {
+      dashboard: '仪表盘',
+      login: '登录',
+      setup: '设置管理员密码',
+      host: '主机与安全',
+      instances: '实例',
+      'not-found': '页面不存在',
+    };
+    const tabs: Record<string, string> = {
+      overview: '概览',
+      settings: '设置',
+      logs: '日志',
+      backups: '备份与恢复',
+      tasks: '任务',
+    };
+    document.title = `${instance ? `${instance.name} · ${tabs[tab]}` : titles[page] || '控制台'} · PalworldPanel`;
+    const frame = requestAnimationFrame(() => {
+      const scroll = document.querySelector('.page-scroll');
+      if (scroll) scroll.scrollTop = Number(window.history.state?.panelScroll) || 0;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [location, instance?.name, initializing, session]);
+
   const requestAction = async (item: Instance, kind: string, args?: Record<string, unknown>) => {
-    if (kind === 'apply-config' && applicationLocked) return;
+    if (busy || instanceTaskLocked || (kind === 'apply-config' && applicationLocked)) return;
     actionOpener.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setError('');
@@ -656,12 +766,56 @@ export function App() {
       <FirstAccessSetup
         onComplete={() => {
           setSetupRequired(false);
-          setSetupFinished(true);
+          navigate('/login', true);
         }}
       />
     );
-  if (setupFinished && !session) return <Login onLogin={loadSession} />;
-  if (!session) return <ReadOnlyDashboard login={<Login embedded onLogin={loadSession} />} />;
+  if (route.page === 'not-found')
+    return (
+      <main className="login-page">
+        <div className="login-card">
+          <h1>页面不存在</h1>
+          <p>请检查访问地址。</p>
+          <RouteLink className="ghost" href={session ? '/instances' : '/dashboard'}>
+            返回首页
+          </RouteLink>
+        </div>
+      </main>
+    );
+  if ((route.page === 'login' || ['instances', 'host'].includes(route.page)) && !session)
+    return (
+      <>
+        <Login onLogin={loginComplete} />
+        <RouteLink className="login-back" href="/dashboard">
+          返回只读仪表盘
+        </RouteLink>
+      </>
+    );
+  if (!session || route.page === 'dashboard')
+    return (
+      <ReadOnlyDashboard
+        login={<Login embedded onLogin={loginComplete} />}
+        onLoginRequest={() => navigate('/login')}
+        management={
+          session ? (
+            <>
+              <RouteLink className="nav-button" href="/instances">
+                实例
+              </RouteLink>
+              <RouteLink className="nav-button" href="/host">
+                主机与安全
+              </RouteLink>
+            </>
+          ) : undefined
+        }
+      />
+    );
+  if (route.page === 'login' || route.page === 'setup' || route.page === 'home')
+    return (
+      <main className="login-page">
+        <p>正在进入控制台…</p>
+      </main>
+    );
   return (
     <div className="shell">
       <header className="topbar">
@@ -673,19 +827,18 @@ export function App() {
         </div>
         <nav aria-label="主导航">
           {[
+            ['dashboard', '仪表盘'],
             ['instances', '实例'],
             ['host', '主机与安全'],
           ].map(([key, label]) => (
-            <button
+            <RouteLink
               key={key}
               className={page === key ? 'nav-active' : 'nav-button'}
-              onClick={() => {
-                setPage(key);
-                setSelected(null);
-              }}
+              href={`/${key}`}
+              aria-current={page === key ? 'page' : undefined}
             >
               {label}
-            </button>
+            </RouteLink>
           ))}
         </nav>
         <button
@@ -695,6 +848,9 @@ export function App() {
               await api('/session', { method: 'DELETE' });
               setSession(null);
               setCsrf('');
+              setInstances([]);
+              setInstancesLoaded(false);
+              navigate('/dashboard', true);
             } catch (e) {
               setError(errorText(e));
             }
@@ -706,15 +862,13 @@ export function App() {
       </header>
       <div className="page-scroll" role="region" aria-label="页面内容" tabIndex={0}>
         <main className="main">
-          {host && host.committedMemoryMiB > host.memoryMiB - host.reservedMemoryMiB && (
-            <p role="alert" className="error">
-              可分配内存不足，请调整实例配额后再创建或增加资源。
-            </p>
-          )}
           <div className="page-intro">
             <div>
               <p className="eyebrow">PALWORLD SERVER MANAGEMENT</p>
-              <h1>{instance?.name || (page === 'host' ? '主机与安全' : '你的独立世界')}</h1>
+              <h1>
+                {instance?.name ||
+                  (selected ? '实例详情' : page === 'host' ? '主机与安全' : '你的独立世界')}
+              </h1>
               {instance && (
                 <p className="muted">
                   世界 {instance.worldGuid || '待生成'} ·{' '}
@@ -727,7 +881,7 @@ export function App() {
                 <RefreshCw size={16} />
                 刷新
               </button>
-              {page === 'instances' && !instance && (
+              {page === 'instances' && !selected && (
                 <button
                   className="primary"
                   onClick={() => {
@@ -758,14 +912,17 @@ export function App() {
                 detail="独立目录与世界"
               />
               <Metric
-                label="已分配内存 / 总内存"
+                compact
+                label="使用中 / 已分配 / 总内存"
                 value={
                   host
-                    ? `${(host.committedMemoryMiB / 1024).toFixed(1)} / ${(host.memoryMiB / 1024).toFixed(1)} GiB`
+                    ? `${host.runtimeUsedMemoryBytes == null ? '未知' : (host.runtimeUsedMemoryBytes / 1024 ** 3).toFixed(1)} / ${(host.committedMemoryMiB / 1024).toFixed(1)} / ${(host.memoryMiB / 1024).toFixed(1)} GiB`
                     : '未获取'
                 }
                 detail={
-                  host ? `系统预留 ${(host.reservedMemoryMiB / 1024).toFixed(1)} GiB` : '未获取'
+                  host
+                    ? `可用 ${host.runtimeAvailableMemoryBytes == null ? '未知' : (host.runtimeAvailableMemoryBytes / 1024 ** 3).toFixed(1)} GiB · 系统预留 ${(host.reservedMemoryMiB / 1024).toFixed(1)} GiB`
+                    : '未获取'
                 }
               />
               <Metric
@@ -780,7 +937,7 @@ export function App() {
               />
             </div>
           )}
-          {page === 'instances' && !instance && (
+          {page === 'instances' && !selected && (
             <section aria-label="实例列表">
               <div className="section-head">
                 <h2>
@@ -812,32 +969,18 @@ export function App() {
                     <div className="instance-heading">
                       <div>
                         <h3>
-                          <button
-                            className="text-button"
-                            onClick={() => {
-                              setSelected(item.id);
-                              setTab('overview');
-                              setObserved(null);
-                            }}
-                          >
+                          <RouteLink className="text-button" href={instancePath(item.id)}>
                             {item.name}
-                          </button>{' '}
+                          </RouteLink>{' '}
                           <span className="muted">期望：{describe(item.desiredPower)}</span>
                         </h3>
                         <p className="muted">
                           {item.worldGuid || '世界尚未核实'} · {item.writable ? '写管理' : '只读'}
                         </p>
                       </div>
-                      <button
-                        className="ghost"
-                        onClick={() => {
-                          setSelected(item.id);
-                          setTab('overview');
-                          setObserved(null);
-                        }}
-                      >
+                      <RouteLink className="ghost" href={instancePath(item.id)}>
                         查看实例
-                      </button>
+                      </RouteLink>
                     </div>
                     <div className="instance-summary">
                       <span>
@@ -867,17 +1010,25 @@ export function App() {
               )}
             </section>
           )}
+          {selected && !instance && (
+            <section className="card">
+              <h2>{instancesLoaded ? '实例不存在或已取消接管' : '正在加载实例…'}</h2>
+              <RouteLink className="text-button back" href="/instances">
+                返回实例列表
+              </RouteLink>
+            </section>
+          )}
           {instance && (
             <section>
-              <button className="text-button back" onClick={() => setSelected(null)}>
+              <RouteLink className="text-button back" href="/instances">
                 <ArrowLeft size={16} /> 返回实例列表
-              </button>
+              </RouteLink>
               <div className="actions instance-controls" aria-label="实例操作">
                 {['start', 'stop', 'backup'].map((kind) => (
                   <button
                     key={kind}
                     className="ghost"
-                    disabled={busy || instanceTaskLocked || !instance.writable}
+                    {...controlProps(kind as ActionKind)}
                     onClick={() => void requestAction(instance, kind)}
                   >
                     {describe(kind)}
@@ -888,7 +1039,7 @@ export function App() {
                     <button
                       key={kind}
                       className="ghost"
-                      disabled={busy || instanceTaskLocked || !instance.writable}
+                      {...controlProps(kind as ActionKind)}
                       onClick={() => void requestAction(instance, kind)}
                     >
                       {describe(kind)}
@@ -896,7 +1047,7 @@ export function App() {
                   ))}
                   <button
                     className="ghost"
-                    disabled={busy || instanceTaskLocked || !instance.writable}
+                    {...controlProps('force-stop')}
                     onClick={() => void requestAction(instance, 'stop', { force: true })}
                   >
                     强制停止
@@ -904,27 +1055,14 @@ export function App() {
 
                   <button
                     className="ghost"
-                    disabled={busy || instanceTaskLocked || !instance.writable}
+                    {...controlProps('upgrade')}
                     onClick={async () => {
                       actionOpener.current =
                         document.activeElement instanceof HTMLElement
                           ? document.activeElement
                           : null;
                       setError('');
-                      setApprovedImages([]);
                       setUpgradeOpen(true);
-                      setBusy(true);
-                      try {
-                        const result = await api<{ approvedImages: string[] }>('/capabilities');
-                        setApprovedImages(result.approvedImages);
-                        setUpgradeImage(instance.image);
-                        setExpectedBuild(instance.gameBuild || '');
-                        setUpgradeMode('image');
-                      } catch (error) {
-                        setError(errorText(error));
-                      } finally {
-                        setBusy(false);
-                      }
                     }}
                   >
                     升级
@@ -934,6 +1072,7 @@ export function App() {
                     !instance.quarantinedUtc && (
                       <button
                         className="primary"
+                        {...controlProps('adopt')}
                         onClick={() => {
                           setExternalSchedulesConfirmed(false);
                           setAdoptOpen(true);
@@ -946,12 +1085,14 @@ export function App() {
                     <>
                       <button
                         className="ghost"
+                        {...controlProps('undo-quarantine')}
                         onClick={() => void requestAction(instance, 'undo-quarantine')}
                       >
                         撤销隔离清理
                       </button>
                       <button
                         className="ghost"
+                        {...controlProps('finalize-purge')}
                         onClick={() => void requestAction(instance, 'finalize-purge')}
                       >
                         保留期后永久清空
@@ -960,7 +1101,7 @@ export function App() {
                   )}
                   <button
                     className="ghost"
-                    disabled={!instance.configurationKnown}
+                    {...controlProps('clone')}
                     onClick={() => {
                       actionOpener.current =
                         document.activeElement instanceof HTMLElement
@@ -973,21 +1114,21 @@ export function App() {
                   </button>
                   <button
                     className="ghost"
-                    disabled={busy || instanceTaskLocked || !instance.writable}
+                    {...controlProps('retain-data')}
                     onClick={() => void requestAction(instance, 'retain-data')}
                   >
                     移除容器保留数据
                   </button>
                   <button
                     className="ghost"
-                    disabled={busy || instanceTaskLocked || !instance.owned || !instance.writable}
+                    {...controlProps('purge')}
                     onClick={() => void requestAction(instance, 'purge')}
                   >
                     隔离清理
                   </button>
                   <button
                     className="ghost"
-                    disabled={busy || instanceTaskLocked}
+                    {...controlProps('unmanage')}
                     onClick={() => void requestAction(instance, 'unmanage')}
                   >
                     取消接管
@@ -1683,8 +1824,7 @@ export function App() {
               ]);
               setCreateOpen(false);
               await refresh();
-              setSelected(created.instanceId);
-              setTab('overview');
+              navigate(instancePath(created.instanceId));
             } catch (error) {
               setError(errorText(error));
             } finally {
@@ -1732,66 +1872,17 @@ export function App() {
           </div>
         </form>
       </Modal>
-      <Modal
-        open={upgradeOpen}
-        onOpenChange={setUpgradeOpen}
-        returnFocus={actionOpener}
-        title="明确选择升级范围"
-        description="保留配套旧安装、旧存档和配置恢复点。游戏更新只在本次显式升级启动，验证后禁用。"
-      >
-        <form
-          onSubmit={async (event) => {
-            event.preventDefault();
-            if (!instance) return;
+      {upgradeOpen && instance && (
+        <UpgradeDialog
+          instanceId={instance.id}
+          returnFocus={actionOpener}
+          onClose={() => setUpgradeOpen(false)}
+          onUpgrade={(arguments_) => {
             setUpgradeOpen(false);
-            await requestAction(instance, 'upgrade', {
-              image: upgradeImage,
-              expectedGameBuild: expectedBuild,
-              mode: upgradeMode,
-            });
+            void requestAction(instance, 'upgrade', arguments_);
           }}
-        >
-          <label>
-            升级范围
-            <select value={upgradeMode} onChange={(event) => setUpgradeMode(event.target.value)}>
-              <option value="image">仅镜像，保留游戏 build</option>
-              <option value="game">仅游戏，保留镜像</option>
-              <option value="both">镜像和游戏</option>
-            </select>
-          </label>
-          <label>
-            批准的镜像 digest
-            <select value={upgradeImage} onChange={(event) => setUpgradeImage(event.target.value)}>
-              {approvedImages.map((image) => (
-                <option key={image}>{image}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            预期游戏 build
-            <input
-              value={expectedBuild}
-              onChange={(event) => setExpectedBuild(event.target.value)}
-              required
-              maxLength={128}
-            />
-          </label>
-          <p className="muted">镜像变更不等于游戏降级；跨版本回退必须使用配套旧安装和旧存档。</p>
-          {error && (
-            <p role="alert" className="error">
-              {error}
-            </p>
-          )}
-          <div className="actions">
-            <button type="button" className="ghost" onClick={() => setUpgradeOpen(false)}>
-              取消
-            </button>
-            <button className="primary" disabled={busy || !approvedImages.length}>
-              预检升级
-            </button>
-          </div>
-        </form>
-      </Modal>
+        />
+      )}
       <Modal
         open={adoptOpen}
         onOpenChange={setAdoptOpen}
@@ -1830,6 +1921,16 @@ export function App() {
           onClose={() => setConfirmation(null)}
           onComplete={refresh}
           onSubmitted={(task) => {
+            if (task?.id) {
+              setPendingActions((previous) => ({
+                ...previous,
+                [confirmation.instance.id]: task.id,
+              }));
+              setTasks((previous) => [
+                task as TaskItem,
+                ...previous.filter((item) => item.id !== task.id),
+              ]);
+            }
             if (confirmation.kind === 'apply-config' && task?.id) {
               setPendingApplications((previous) => ({
                 ...previous,
@@ -2013,9 +2114,19 @@ export function App() {
   );
 }
 
-function Metric({ label, value, detail }: { label: string; value: string; detail: string }) {
+function Metric({
+  label,
+  value,
+  detail,
+  compact = false,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  compact?: boolean;
+}) {
   return (
-    <div className="metric">
+    <div className={compact ? 'metric metric-compact' : 'metric'}>
       <div className="metric-icon">
         <Activity size={22} aria-hidden="true" />
       </div>

@@ -1,0 +1,173 @@
+{
+  "start": {
+    "label": "启动",
+    "description": "启动并核实世界与游戏接口；已运行时无需重复启动。",
+    "states": [
+      "stopped",
+      "exited",
+      "created",
+      "dead"
+    ],
+    "writable": true,
+    "healthy": false,
+    "owned": false,
+    "containerRequired": false
+  },
+  "stop": {
+    "label": "停止",
+    "description": "先保存游戏进度，再正常停服；保存失败时保持运行。",
+    "states": [
+      "running"
+    ],
+    "writable": true,
+    "healthy": true,
+    "owned": false,
+    "containerRequired": true
+  },
+  "force-stop": {
+    "label": "强制停止",
+    "description": "立即停止容器，跳过保存；可能丢失未保存进度。",
+    "states": [
+      "running",
+      "paused",
+      "restarting"
+    ],
+    "writable": true,
+    "healthy": false,
+    "owned": false,
+    "containerRequired": true
+  },
+  "restart": {
+    "label": "重启",
+    "description": "保存进度后停止并重新启动，核实世界与接口。",
+    "states": [
+      "running"
+    ],
+    "writable": true,
+    "healthy": true,
+    "owned": false,
+    "containerRequired": true
+  },
+  "save": {
+    "label": "保存",
+    "description": "立即保存当前游戏进度，不停服、不创建备份。",
+    "states": [
+      "running"
+    ],
+    "writable": true,
+    "healthy": true,
+    "owned": false,
+    "containerRequired": true
+  },
+  "backup": {
+    "label": "离线备份",
+    "description": "停服创建备份；原本运行的实例备份后重新启动，原本停止的实例保持停止。",
+    "states": [
+      "running",
+      "stopped",
+      "exited",
+      "created",
+      "dead"
+    ],
+    "writable": true,
+    "healthy": true,
+    "owned": false,
+    "containerRequired": false
+  },
+  "upgrade": {
+    "label": "升级",
+    "description": "备份安装与存档后升级；需处理验证结果，失败可回退。",
+    "states": [
+      "running",
+      "stopped",
+      "exited",
+      "created",
+      "dead"
+    ],
+    "writable": true,
+    "healthy": true,
+    "owned": false,
+    "containerRequired": false
+  },
+  "clone": {
+    "label": "仅克隆规则",
+    "description": "用当前规则创建独立新世界；不复制存档、密码或端口。",
+    "states": null,
+    "writable": false,
+    "healthy": false,
+    "owned": false,
+    "containerRequired": false
+  },
+  "retain-data": {
+    "label": "移除容器保留数据",
+    "description": "保存并停服、备份后移除容器；保留存档，之后可重新启动重建。",
+    "states": [
+      "running",
+      "stopped",
+      "exited",
+      "created",
+      "dead"
+    ],
+    "writable": true,
+    "healthy": true,
+    "owned": false,
+    "containerRequired": true
+  },
+  "purge": {
+    "label": "隔离清理",
+    "description": "备份并停服、移除容器，将数据目录隔离至少 7 天。",
+    "states": [
+      "running",
+      "stopped",
+      "exited",
+      "created",
+      "dead"
+    ],
+    "writable": true,
+    "healthy": true,
+    "owned": true,
+    "containerRequired": false
+  },
+  "unmanage": {
+    "label": "取消接管",
+    "description": "移除面板登记，保留容器、存档和备份，不改变游戏运行状态。",
+    "states": null,
+    "writable": false,
+    "healthy": false,
+    "owned": false,
+    "containerRequired": false
+  },
+  "adopt": {
+    "label": "启用受控写管理",
+    "description": "确认外部调度已停用，停服备份后启用面板写管理。",
+    "states": [
+      "running",
+      "stopped",
+      "exited",
+      "created",
+      "dead"
+    ],
+    "writable": false,
+    "healthy": false,
+    "owned": false,
+    "containerRequired": false
+  },
+  "undo-quarantine": {
+    "label": "撤销隔离清理",
+    "description": "恢复隔离的数据目录及写管理，不自动启动游戏。",
+    "states": null,
+    "writable": false,
+    "healthy": false,
+    "owned": true,
+    "containerRequired": false
+  },
+  "finalize-purge": {
+    "label": "保留期后永久清空",
+    "description": "隔离至少 7 天并验证独立最终备份后，永久删除隔离目录。",
+    "states": null,
+    "writable": false,
+    "healthy": false,
+    "owned": true,
+    "containerRequired": false
+  }
+}

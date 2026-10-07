@@ -8,7 +8,7 @@ on:
       tag:
         description: "Dry-run version tag (packages only; no tag or Release is created)"
         required: true
-        default: "v0.1.0-rc.1"
+        default: "v0.1.0-rc.2"
 
 permissions:
   contents: read

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Modal } from './Modal';
+import { instanceActions, type ActionKind } from './instanceActionPolicy';
 import { api, ApiError, commandKey } from './api';
 
 export type ActionRequest = {
@@ -37,7 +38,7 @@ const impacts: Record<string, string> = {
   restart: '保存游戏后重启此实例，当前玩家连接将中断。',
   save: '立即保存此实例的游戏进度，不停止游戏。',
   backup: '保存游戏并停服创建完整备份，期间玩家无法连接。',
-  upgrade: '停止此实例并备份，再按所选范围升级，当前玩家连接将中断。',
+  upgrade: '保存进度、停服并备份后更新到目标版本，当前玩家连接将中断。',
   adopt: '停服备份后由面板接管此实例的配置、备份与更新管理。',
   'retain-data': '停止并移除此实例容器，保留存档和备份。',
   purge: '停止此实例并将数据隔离，至少保留 7 天后才允许永久清空。',
@@ -116,7 +117,9 @@ export function ActionConfirmation({
       description={
         force
           ? '立即终止容器，跳过保存，可能丢失未保存进度。'
-          : impacts[request.kind] || '执行此实例操作前，请确认目标和影响。'
+          : instanceActions[request.kind as ActionKind]?.description ||
+            impacts[request.kind] ||
+            '执行此实例操作前，请确认目标和影响。'
       }
       returnFocus={returnFocus}
     >
@@ -125,15 +128,14 @@ export function ActionConfirmation({
       {request.arguments && (
         <dl className="facts">
           {Object.entries(request.arguments)
-            .filter(([key]) => key !== 'force')
+            .filter(([key]) => key !== 'force' && key !== 'updateToken')
             .map(([key, value]) => (
               <div key={key}>
                 <dt>
                   {(
                     {
-                      image: '目标镜像',
-                      expectedGameBuild: '预期游戏版本',
-                      mode: '升级范围',
+                      currentVersion: '当前版本',
+                      targetVersion: '目标版本',
                       backupId: '恢复点',
                       world: '目标世界',
                     } as Record<string, string>

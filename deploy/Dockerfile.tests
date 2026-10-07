@@ -3,7 +3,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends libsqlite3-0 &&
 WORKDIR /source
 COPY global.json Directory.Build.props PalworldPanel.sln ./
 COPY src/PalworldPanel.Server/ src/PalworldPanel.Server/
-COPY src/PalworldPanel.Contracts/game-settings.json src/PalworldPanel.Contracts/game-settings.json
+COPY src/PalworldPanel.Contracts/ src/PalworldPanel.Contracts/
 COPY tests/PalworldPanel.UnitTests/ tests/PalworldPanel.UnitTests/
 RUN dotnet restore PalworldPanel.sln --locked-mode && dotnet build PalworldPanel.sln --no-restore -c Release
 ENTRYPOINT ["dotnet", "test", "PalworldPanel.sln", "--no-build", "--no-restore", "-c", "Release", "--logger", "console;verbosity=minimal"]

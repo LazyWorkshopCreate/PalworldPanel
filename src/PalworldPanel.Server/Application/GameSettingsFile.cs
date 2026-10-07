@@ -39,6 +39,24 @@ public static class GameSettingsFile
     }
     public static string Decode(string value) => value.StartsWith('"') && value.EndsWith('"')
         ? EnvironmentFile.ReadIniText(value[1..^1]) : value;
+    // Unreal rewrites numeric formatting on shutdown. Fingerprint values, preserving unknown settings.
+    public static string CanonicalSource(string source)
+    {
+        var values = Parse(source);
+        var normalized = values.OrderBy(p => p.Key, StringComparer.OrdinalIgnoreCase).Select(p =>
+        {
+            var field = GameSettingCatalog.Definitions.FirstOrDefault(d => d.Key.Equals(p.Key, StringComparison.OrdinalIgnoreCase));
+            var value = p.Value;
+            if (field?.Type == "number" && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) && double.IsFinite(number))
+                value = number.ToString("G17", CultureInfo.InvariantCulture);
+            else if (field?.Type == "boolean" && bool.TryParse(value, out var boolean)) value = boolean ? "True" : "False";
+            return new[] { p.Key.ToUpperInvariant(), value };
+        });
+        // Keep all other sections and directives; only line endings and boundary whitespace are formatting.
+        var remainder = Regex.Replace(source, @"(?m)^\s*OptionSettings\s*=\s*\(.*\)\s*$", "")
+            .Replace("\r\n", "\n", StringComparison.Ordinal).Trim();
+        return JsonSerializer.Serialize(new { remainder, values = normalized });
+    }
     public static string Patch(string source, IReadOnlyDictionary<string, string> values)
     {
         var existing = Parse(source);

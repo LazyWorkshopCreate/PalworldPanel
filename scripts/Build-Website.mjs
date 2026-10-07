@@ -279,7 +279,12 @@ for (const locale of ["zh", "en"]) {
       `# PalworldPanel v${version}`,
       `Release title must match its filename: ${locale}/${name}`,
     );
-    releases.push({ date: match[1], version, source: translatedSource });
+    const summary = translatedSource.trim().split(/\r?\n\s*\r?\n/)[1];
+    assert.ok(
+      summary && !/^(?:#|- |```|\||>)/.test(summary),
+      `Release notes need an introductory summary: ${locale}/${name}`,
+    );
+    releases.push({ date: match[1], version, source: translatedSource, summary });
   }
   releases.sort(
     (a, b) =>
@@ -290,7 +295,7 @@ for (const locale of ["zh", "en"]) {
     "releases/index.html",
     shell(
       "发布日志",
-      `<section class="document-heading"><p class="eyebrow">RELEASE NOTES</p><h1>发布日志</h1><p>按版本查看功能变化和升级说明。发行状态与下载以 GitHub Releases 为准。</p></section><div class="release-list">${releases.map((release) => `<article><time datetime="${release.date}">${release.date}</time><div><h2><a href="./v${release.version}.html">v${release.version}</a></h2><p>功能变化、下载升级与验证范围。</p><a class="text-link" href="./v${release.version}.html">查看版本详情 →</a></div></article>`).join("")}</div>`,
+      `<section class="document-heading"><p class="eyebrow">RELEASE NOTES</p><h1>发布日志</h1><p>按版本查看功能变化和升级说明。发行状态与下载以 GitHub Releases 为准。</p></section><div class="release-list">${releases.map((release) => `<article><time datetime="${release.date}">${release.date}</time><div><h2><a href="./v${release.version}.html">v${release.version}</a></h2><p>${inline(release.summary.replace(/\r?\n/g, " "))}</p><a class="text-link" href="./v${release.version}.html">查看版本详情 →</a></div></article>`).join("")}</div>`,
       "releases",
     ),
   );

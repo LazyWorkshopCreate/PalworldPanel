@@ -15,3 +15,7 @@
 版本继续以 version.json 为唯一来源。仅推送 v* tag 触发 Release 和 Pages，main 提交运行 CI。Pages 使用 GitHub Actions 构建，github-pages 环境仅允许版本标签 v* 部署。发布前完成文档、网站与版本契约检查；发布后核对 CI、Release、Pages 的目标提交、发行资产 SHA256SUMS 及在线网站。
 
 运行数据、管理员凭据、实例存档和本地构建产物不在公开仓库或 Pages 中。现有本机服务不随仓库发布而升级。
+
+## rc.2 汇总
+
+v0.1.0-rc.2 源码来自已验收的开发版本 tag（bf9d96fed0c5573680cc9112fccaf08eba35750b），在 rc.1 公开快照上形成单一汇总提交。保留组织链接、MIT 许可证和示例环境资料；新增 Linux 验收记录已脱敏。发布列表分别显示各版本的中英文功能摘要。

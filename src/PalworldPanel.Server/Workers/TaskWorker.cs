@@ -7,7 +7,7 @@ using PalworldPanel.Server.Infrastructure;
 namespace PalworldPanel.Server.Workers;
 
 public sealed class TaskWorker(SqliteStore store, InstanceService instances, DockerBackend docker,
-    GameRestClient game, BackupService backups, QuarantineService quarantine, IHostApplicationLifetime lifetime, HeavyIoGate ioGate) : BackgroundService
+    GameRestClient game, BackupService backups, QuarantineService quarantine, IHostApplicationLifetime lifetime, HeavyIoGate ioGate, GameUpdateService updates) : BackgroundService
 {
     private readonly SemaphoreSlim heavyIo = ioGate.Semaphore;
 
@@ -21,6 +21,7 @@ public sealed class TaskWorker(SqliteStore store, InstanceService instances, Doc
                 var instance = store.Instance(interrupted.InstanceId);
                 instances.CheckRoot(instance);
                 instance = quarantine.ReconcileInterruptedMove(instance, interrupted);
+                if (interrupted.Kind == "upgrade") await docker.StopUpdaterAsync(interrupted.Id);
                 if (interrupted.Kind != "unmanage")
                 {
                 await HoldAsync(instance, stoppingToken);
@@ -55,6 +56,7 @@ public sealed class TaskWorker(SqliteStore store, InstanceService instances, Doc
         {
             if (task.Kind == "unmanage")
             {
+                await instances.ValidateActionAsync(instance, task.Kind, false, cancellation, task.Id);
                 if (!store.SetTask(task.Id, "Running", "Preflight", expectedState: "Queued")) return;
                 store.ForgetInstance(instance.Id);
                 store.SetTask(task.Id, "Succeeded", "Complete");
@@ -64,6 +66,7 @@ public sealed class TaskWorker(SqliteStore store, InstanceService instances, Doc
             instances.CheckRoot(instance);
             using var instanceLock = DiskLock.AcquireInstance(instances.Options.StateRoot, instance.Root, instance.Id);
             if (!store.SetTask(task.Id, "Running", "Preflight", expectedState: "Queued")) return;
+            await instances.ValidateActionAsync(instance, task.Kind, Bool(arguments, "force"), cancellation, task.Id);
             if (task.Kind is not ("create" or "unmanage" or "undo-quarantine" or "finalize-purge")) instances.CheckSource(instance);
             if (!instance.Writable && task.Kind is not ("unmanage" or "undo-quarantine" or "finalize-purge" or "adopt")) throw new PanelException("ReadOnlyInstance", "实例处于只读管理模式。", 409);
             switch (task.Kind)
@@ -160,19 +163,17 @@ public sealed class TaskWorker(SqliteStore store, InstanceService instances, Doc
             (instance.AppliedAdminCipher is not null && instance.AppliedAdminCipher != instance.AdminCipher) ||
             (instance.AppliedGameCipher is not null && instance.AppliedGameCipher != instance.GameCipher)))
             throw new PanelException("DraftPending", "请先处理配置草稿，再执行升级。", 409);
+        GameUpdatePlan? updatePlan = null;
         if (task.Kind == "upgrade")
         {
-            var image = payload.TryGetProperty("image", out var requestedImage) ? requestedImage.GetString() : null;
-            var build = payload.TryGetProperty("expectedGameBuild", out var requestedBuild) ? requestedBuild.GetString() : null;
-            var mode = payload.TryGetProperty("mode", out var requestedMode) ? requestedMode.GetString() : null;
-            if (mode is not ("image" or "game" or "both") || image is null || !instances.Options.AllowedImages.Contains(image, StringComparer.Ordinal) ||
-                !image.Contains("@sha256:", StringComparison.Ordinal) || string.IsNullOrEmpty(build) || build.Length > 128 || build.Any(char.IsControl) ||
-                (mode == "game" && image != instance.Image) || (mode == "image" && build != instance.GameBuild))
-                throw new PanelException("UpgradeNotApproved", "须选择 image/game/both、批准的 digest 和预期游戏 build。", 400);
-            await docker.CommandAsync(["pull", image], TimeSpan.FromMinutes(15), cancellation: cancellation);
+            updatePlan = await updates.ValidateAsync(instance, payload, cancellation);
+            if (!instances.Options.AllowedImages.Contains(instance.Image, StringComparer.Ordinal) || !instance.Image.Contains("@sha256:", StringComparison.Ordinal))
+                throw new PanelException("UpgradeNotApproved", "此实例安装方式暂不支持自动升级。", 409);
+            await docker.CommandAsync(["pull", instance.Image], TimeSpan.FromMinutes(15), cancellation: cancellation);
         }
         var id = await docker.ContainerIdAsync(instance, cancellation);
         var wasRunning = id is not null && (await docker.InspectAsync(id, cancellation)).GetProperty("State").GetProperty("Running").GetBoolean();
+        var resumesExistingAllocation = wasRunning && instance.Desired.MemoryMiB <= (instance.Applied ?? instance.Desired).MemoryMiB;
         var savedBytes = TreeFiles.Bytes(SafePaths.Within(instance.Root, "data/Pal/Saved"));
         var backupBytes = task.Kind == "upgrade" ? TreeFiles.Bytes(SafePaths.Within(instance.Root, "data")) : savedBytes;
         var stagingBytes = task.Kind == "upgrade" ? Math.Max(backupBytes, 20L << 30) : 0;
@@ -231,7 +232,7 @@ public sealed class TaskWorker(SqliteStore store, InstanceService instances, Doc
                 instance = await InstallWorldAsync(instance, task, payload, cancellation);
                 if (wasRunning)
                 {
-                    await StartAsync(instance, cancellation);
+                    await StartAsync(instance, cancellation, resumesExistingAllocation);
                     instance = await ValidateAsync(instance, cancellation);
                 }
                 store.SaveInstance(instance with { SourceHash = instances.SourceHash(instance), DesiredPower = wasRunning ? "running" : "stopped" });
@@ -249,27 +250,16 @@ public sealed class TaskWorker(SqliteStore store, InstanceService instances, Doc
             }
             if (task.Kind == "upgrade")
             {
-                var image = payload.GetProperty("image").GetString()!;
-                var expectedBuild = payload.GetProperty("expectedGameBuild").GetString()!;
-                if (!instances.Options.AllowedImages.Contains(image, StringComparer.Ordinal) || !image.Contains("@sha256:", StringComparison.Ordinal) ||
-                    expectedBuild.Length is < 1 or > 128 || expectedBuild.Any(char.IsControl))
-                    throw new PanelException("UpgradeNotApproved", "镜像须使用批准的 digest，且必须指定预期游戏版本。", 409);
-                instance = instance with { Image = image };
-                instances.WriteTemplate(instance);
-                store.SaveInstance(instance with { SourceHash = instances.SourceHash(instance) });
                 Phase(task, "UpgradeInstallation");
-                await docker.ComposeAsync(instance, ["up", "--detach", "--no-deps", "--force-recreate", "--pull", "never", instance.Service], true,
-                    cancellation, updateInstallation: payload.GetProperty("mode").GetString() is "game" or "both");
-                instance = await ValidateAsync(instance, cancellation);
-                if (instance.GameBuild != expectedBuild) throw new PanelException("GameBuildMismatch", "实际游戏 build 不等于预期版本，禁止自动接受。", 409);
-                // Recreate with updates disabled before any restart policy can be approved.
+                await docker.UpdateInstallationAsync(instance, task.Id, cancellation);
+                GameUpdateService.VerifyContent(instance, updatePlan!);
                 await docker.ComposeAsync(instance, ["up", "--detach", "--no-deps", "--force-recreate", "--pull", "never", instance.Service], true, cancellation);
                 instance = await ValidateAsync(instance, cancellation);
-                if (instance.GameBuild != expectedBuild) throw new PanelException("GameBuildMismatch", "固定升级结果校验失败，保持恢复锁。", 409);
+                GameUpdateService.VerifyInstallation(instance, updatePlan!);
                 if (!wasRunning) await StopAsync(instance, task, false, cancellation);
                 store.SaveInstance(instance with { SourceHash = instances.SourceHash(instance), DesiredPower = wasRunning ? "running" : "stopped" });
                 store.SetTask(task.Id, "NeedsAttention", "PlayerVerification", "PlayerVerificationPending",
-                    message: "镜像和游戏版本核验通过，保留旧安装及旧存档恢复点，等待原玩家核验。");
+                    message: "更新及启动检查通过，已保留恢复点，等待玩家确认。");
                 return;
             }
             if (task.Kind == "retain-data")
@@ -280,7 +270,7 @@ public sealed class TaskWorker(SqliteStore store, InstanceService instances, Doc
             }
             else if (wasRunning || task.Kind == "restart")
             {
-                await StartAsync(instance, cancellation);
+                await StartAsync(instance, cancellation, resumesExistingAllocation);
                 instance = await ValidateAsync(instance, cancellation);
                 await ApproveRestartAsync(instance, cancellation);
                 store.SaveInstance(instance with { Applied = task.Kind is "apply-config" or "adopt" ? instance.Desired : instance.Applied,
@@ -375,8 +365,14 @@ public sealed class TaskWorker(SqliteStore store, InstanceService instances, Doc
             throw new PanelException("StopUnconfirmed", "无法确认容器停止。", 409);
     }
 
-    private Task StartAsync(InstanceRecord instance, CancellationToken cancellation) => docker.ComposeAsync(instance,
-        ["up", "--detach", "--no-deps", "--pull", "never", instance.Service], true, cancellation);
+    private async Task StartAsync(InstanceRecord instance, CancellationToken cancellation, bool resumesExistingAllocation = false)
+    {
+        using var allocationLock = DiskLock.Acquire(Path.Combine(instances.Options.StateRoot, "allocation.lock"));
+        // A maintenance stop must not turn an already running, unchanged allocation into a new full-capacity request.
+        // Explicit starts, creations and increased memory limits still require fresh capacity validation.
+        if (!resumesExistingAllocation) await instances.ValidateAvailableMemoryAsync(instance.Id, instance.Desired, cancellation);
+        await docker.ComposeAsync(instance, ["up", "--detach", "--no-deps", "--pull", "never", instance.Service], true, cancellation);
+    }
 
     private async Task<InstanceRecord> ValidateAsync(InstanceRecord instance, CancellationToken cancellation)
     {

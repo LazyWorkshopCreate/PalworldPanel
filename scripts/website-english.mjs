@@ -133,8 +133,6 @@ export const labels = {
   "← 返回文档列表": "← Back to documentation",
   "按版本查看功能变化和升级说明。发行状态与下载以 GitHub Releases 为准。":
     "Browse changes and upgrade instructions by version. Refer to GitHub Releases for release availability and downloads.",
-  "功能变化、下载升级与验证范围。":
-    "Changes, downloads, upgrades and verification scope.",
   "查看版本详情 →": "View release notes →",
   "查看发行与下载 ↗": "Releases and downloads ↗",
   "← 返回发布日志列表": "← Back to release notes",

@@ -113,6 +113,8 @@ builder.Services.AddSingleton<ConfirmationTokens>();
 builder.Services.AddSingleton<HeavyIoGate>();
 builder.Services.AddSingleton<DockerBackend>();
 builder.Services.AddSingleton<GameRestClient>();
+builder.Services.AddHttpClient<SteamReleaseCatalog>().ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+builder.Services.AddSingleton<GameUpdateService>();
 builder.Services.AddSingleton<HostMetrics>();
 builder.Services.AddSingleton<InstanceService>();
 builder.Services.AddSingleton<PublicDashboard>();
@@ -147,6 +149,7 @@ builder.Host.UseSerilog((_, configuration) => configuration.MinimumLevel.Warning
     .WriteTo.File(Path.Combine(options.StateRoot, "logs", "panel-.log"), rollingInterval: RollingInterval.Day,
         retainedFileCountLimit: 30, fileSizeLimitBytes: 10L << 20, rollOnFileSizeLimit: true));
 var app = builder.Build();
+app.Services.GetRequiredService<InstanceService>().MigrateSourceHashes();
 app.Use(async (context, next) =>
 {
     if (!app.Services.GetRequiredService<SourceAccessPolicy>().Allows(context.Connection.RemoteIpAddress))
@@ -161,8 +164,11 @@ app.Use(async (context, next) =>
     try { await next(context); }
     catch (PanelException error)
     { await Results.Problem(statusCode: error.Status, title: error.Message, extensions: new Dictionary<string, object?> { ["code"] = error.Code }).ExecuteAsync(context); }
-    catch (Exception)
-    { await Results.Problem(statusCode: 500, title: "请求未完成，请查看任务状态。", extensions: new Dictionary<string, object?> { ["code"] = "InternalError" }).ExecuteAsync(context); }
+    catch (Exception error)
+    {
+        Log.Error("Request failed: {ExceptionType}; {StackTrace}", error.GetType().Name, error.StackTrace);
+        await Results.Problem(statusCode: 500, title: "请求未完成，请查看任务状态。", extensions: new Dictionary<string, object?> { ["code"] = "InternalError" }).ExecuteAsync(context);
+    }
 });
 app.UseAuthentication();
 app.Use(async (context, next) =>

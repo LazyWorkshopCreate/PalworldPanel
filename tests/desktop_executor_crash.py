@@ -33,9 +33,15 @@ if __name__ == '__main__':
     if pending:
         task = pending[0]
     else:
+        status, raw, _ = request('/api/v1/instances/' + instance_id + '/update-check', 'POST', {}, {'X-CSRF-Token': login()})
+        assert status == 200, ('update-check', status)
+        update = json.loads(raw)
+        if update['status'] == 'up-to-date':
+            print('SKIP executor crash: no available update; explicit isolated old-install fixture required', flush=True)
+            raise SystemExit(0)
         watcher = threading.Thread(target=interrupt, daemon=True)
         watcher.start()
-        task = run_action('upgrade', {'mode':'image','image':original['image'],'expectedGameBuild':original['gameBuild']}, 'NeedsAttention')
+        task = run_action('upgrade', {'updateToken': update['updateToken']}, 'NeedsAttention')
         assert crashed.is_set()
     assert task['safeCode'] == 'ExecutorInterrupted'
     assert task['recoveryPoint']

@@ -10,6 +10,10 @@
 
 API 统一 `/api/v1`；游戏 REST 前缀另行适配，禁止混淆。使用类型明确的请求/响应，不输出密码或内部任意路径；API 404 不返回 SPA 页面。错误提供稳定代码、可读信息及脱敏 task/correlation ID。参数校验、授权和实例归属在后端执行，前端提示不能替代。
 
+控制台导航以 URL 为唯一来源，所有主页面及实例页签支持深链接、刷新和前进后退；真实链接保留浏览器新标签页行为。管理地址受会话守卫保护，登录回跳只允许已知本地地址，密码、预检令牌及写命令不进入 URL。导航取消旧读取、清理瞬时弹窗，不能释放未结束任务锁。地址契约见[控制台路由设计](../design/2026-10-07-console-routing.md)。
+
+支持内网 HTTP 的前端路径不能依赖仅安全上下文可用的浏览器接口。幂等键优先使用 crypto.randomUUID，不可用时用 crypto.getRandomValues 生成 UUID v4，不能以 Math.random 代替安全随机；验收须覆盖真实内网 IP 的 HTTP 地址，不能只使用 localhost。
+
 外部副作用封装在适配层：Docker/Compose、REST、配置文件与备份操作可替换测试实现。子进程使用固定程序和 ArgumentList，不接收任意 shell；HTTP 禁重定向和任意目标 URL。采用取消令牌、有界响应/并发和明确超时。
 
 ## 数据与任务
@@ -17,6 +21,8 @@ API 统一 `/api/v1`；游戏 REST 前缀另行适配，禁止混淆。使用类
 数据库使用参数化 SQL、外键、迁移版本与事务；游戏文件不入库。迁移前备份，恢复使用配套 DB/journal/keyVersion，备份通过 Online Backup API。不得把 SQLite 事务描述为文件系统原子事务。
 
 实例锁以稳定实例 ID 存放于 StateRoot/instance-locks，不放在会被隔离移动或清空的实例目录中。目录不存在时拒绝隐式创建；备份导出使用同一身份锁，不能重建已经清空的目录。Queued、Running、NeedsAttention 期间前端禁止提交新的实例写操作，后端仍独立执行互斥检查。
+
+实例操作栏遵循共用 instance-actions.json 契约，按实际容器状态、接口健康、权限、隔离状态和保留期启停按钮，并说明用途及停用原因。所有任务回执立即锁定实例操作，任务列表刷新落后时不得提前解锁。API 预览、提交和执行器须独立验证操作条件；克隆也核对源实例任务及身份锁。逐项用途和当前验证边界见[操作栏验收](../verification/2026-10-07-instance-action-controls.md)。
 
 新建预览和正式提交均检查空间余量，拒绝时不得留下实例和任务。升级用规则字段与附加参数的内容比较草稿，不能依赖字典对象引用。
 
@@ -32,6 +38,8 @@ Linux 后端 root + Docker socket，Windows 后端 LocalSystem + 本机 Linux na
 
 ## 质量门槛
 
+直接维护游戏 INI 时，配置源指纹必须区分参数变化与游戏停服产生的数字/布尔格式变化；未知字段、秘密和其他配置段仍参与检测。版本化旧指纹仅在原字节匹配且无活动任务时迁移，变化或无法读取的来源保持阻止，不能启动时自动接受新配置。实际停启与再次接管证据见 [Linux 验收](../verification/2026-10-07-linux-acceptance.md)。
+
 实现后启用 Nullable、warnings as errors、TypeScript strict 与 Prettier；C# 异步路径不使用同步阻塞等待。依赖锁与构建脚本可重现；不提交 dist/wwwroot 生成资源、bin/obj、node_modules 和运行数据。
 
 测试优先覆盖 ZIP 路径/碰撞/限制、容量与端口竞争、任务幂等和锁、恢复阶段故障、配置漂移、IP/会话/CSRF、秘密脱敏及备份恢复。xUnit 与 Vitest/Testing Library 按技术栈采用，集成测试使用临时目录与明确隔离实例，不默认访问生产。文档和低风险排版修改只跑对应检查，不创建镜像实现的无意义测试。
@@ -41,3 +49,7 @@ Linux 后端 root + Docker socket，Windows 后端 LocalSystem + 本机 Linux na
 Windows 部署 PowerShell 5.1 脚本使用 UTF-8 BOM 保证中文解析；运行 JSON、其他源码与文档保持 UTF-8 无 BOM。服务使用绝对路径和独立 Docker 配置，不继承登录用户 Docker context。Windows 运行模式见 ADR-005 与 Windows 部署规范。
 
 未登录访问仅允许经过原精确 IP 白名单后的只读仪表盘投影，管理路由仍认证，所有写路由继续认证/CSRF。新增匿名字段必须审查数据来源与秘密/路径泄漏，不能直接返回完整实例或观测模型。
+
+实例更新先按[更新设计](../design/2026-10-07-instance-updates.md)检查正式版本，检查失败不得误报最新；升级任务必须验证目标安装内容及实际启动版本，保留配套旧安装与存档恢复点。
+
+新建及启动必须按[实时内存准入设计](../design/2026-10-07-memory-admission.md)检查，累计分配仅展示。停止实例不计入启动预约，等待创建或启动任务按实例去重，入队和实际启动共用分配锁并重新采样；未知采样拒绝操作。

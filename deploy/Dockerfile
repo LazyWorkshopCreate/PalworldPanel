@@ -4,7 +4,7 @@ RUN corepack enable
 COPY src/PalworldPanel.AdminWeb/package.json src/PalworldPanel.AdminWeb/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY src/PalworldPanel.AdminWeb/ ./
-COPY src/PalworldPanel.Contracts/game-settings.json /PalworldPanel.Contracts/game-settings.json
+COPY src/PalworldPanel.Contracts/ /PalworldPanel.Contracts/
 RUN pnpm build
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:e70cdb7f80b0348f5cb85f19a8f670fca061f033d57eed12fa003d58b0e06317 AS server
@@ -12,7 +12,7 @@ ARG PANEL_VERSION=0.0.0
 WORKDIR /source
 COPY global.json Directory.Build.props ./
 COPY src/PalworldPanel.Server/ src/PalworldPanel.Server/
-COPY src/PalworldPanel.Contracts/game-settings.json src/PalworldPanel.Contracts/game-settings.json
+COPY src/PalworldPanel.Contracts/ src/PalworldPanel.Contracts/
 RUN dotnet restore src/PalworldPanel.Server --locked-mode && dotnet publish src/PalworldPanel.Server --no-restore -c Release -p:Version=$PANEL_VERSION -o /app
 COPY --from=web /web/dist/ /app/wwwroot/
 
