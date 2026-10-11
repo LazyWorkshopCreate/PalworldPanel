@@ -104,7 +104,7 @@ it.each(['overview', 'settings', 'logs', 'backups', 'tasks'])(
     );
     if (tab === 'settings') expect(screen.getByText('配置草稿')).toBeInTheDocument();
     if (tab === 'logs') expect(await screen.findByText('合成日志')).toBeInTheDocument();
-    expect(document.title).toContain('路由实例');
+    await waitFor(() => expect(document.title).toContain('路由实例'));
   },
 );
 

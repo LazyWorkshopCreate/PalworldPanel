@@ -7,7 +7,7 @@ using PalworldPanel.Server.Infrastructure;
 namespace PalworldPanel.Server.Workers;
 
 public sealed class TaskWorker(SqliteStore store, InstanceService instances, DockerBackend docker,
-    GameRestClient game, BackupService backups, QuarantineService quarantine, IHostApplicationLifetime lifetime, HeavyIoGate ioGate, GameUpdateService updates) : BackgroundService
+    GameRestClient game, BackupService backups, QuarantineService quarantine, IHostApplicationLifetime lifetime, HeavyIoGate ioGate, GameUpdateService updates, ILogger<TaskWorker> logger) : BackgroundService
 {
     private readonly SemaphoreSlim heavyIo = ioGate.Semaphore;
 
@@ -30,13 +30,23 @@ public sealed class TaskWorker(SqliteStore store, InstanceService instances, Doc
                     await docker.CommandAsync(["stop", "--time", "120", container], TimeSpan.FromSeconds(135), cancellation: stoppingToken);
                 }
             }
-            catch (Exception) { /* Always preserve the durable task as NeedsAttention. */ }
+            catch (Exception error)
+            {
+                logger.LogWarning("Interrupted task {TaskId} could not be held ({ExceptionType}): {Detail}",
+                    interrupted.Id, error.GetType().Name, LogRedactor.Detail(error.Message));
+            }
             store.SetTask(interrupted.Id, "NeedsAttention", interrupted.Phase, "ExecutorInterrupted", message: "执行器中断，已禁止自动续跑破坏性阶段。");
         }
         while (!stoppingToken.IsCancellationRequested)
         {
             var completed = running.Where(pair => pair.Value.IsCompleted).Select(pair => pair.Key).ToArray();
-            foreach (var id in completed) { await running[id]; running.Remove(id); }
+            foreach (var id in completed)
+            {
+                var job = running[id];
+                running.Remove(id);
+                try { await job; }
+                catch (Exception error) { PreserveFault(id, error); }
+            }
             foreach (var task in store.Tasks("Queued").Where(t => !running.ContainsKey(t.Id)))
                 if (running.Count < 4) running.Add(task.Id, RunAsync(task, stoppingToken));
             await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
@@ -49,7 +59,14 @@ public sealed class TaskWorker(SqliteStore store, InstanceService instances, Doc
     {
         InstanceRecord instance;
         try { instance = store.Instance(task.InstanceId); }
-        catch (PanelException ex) { store.SetTask(task.Id, "Failed", "Preflight", ex.Code); return; }
+        catch (PanelException ex)
+        {
+            store.SetTask(task.Id, "Failed", "Preflight", ex.Code);
+            Diagnose(task, "Failed", "Preflight", ex.Code, ex);
+            return;
+        }
+        try
+        {
         using var payload = JsonDocument.Parse(task.Payload);
         var arguments = payload.RootElement;
         try
@@ -126,12 +143,16 @@ public sealed class TaskWorker(SqliteStore store, InstanceService instances, Doc
             store.SetTask(task.Id, "Succeeded", "Complete");
             store.Audit(task.User, task.InstanceId, task.Kind, "Succeeded", task.Id);
         }
-        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
-        { store.SetTask(task.Id, "NeedsAttention", "Interrupted", "ExecutorInterrupted"); }
+        catch (OperationCanceledException error) when (cancellation.IsCancellationRequested)
+        {
+            store.SetTask(task.Id, "NeedsAttention", "Interrupted", "ExecutorInterrupted");
+            Diagnose(task, "NeedsAttention", "Interrupted", "ExecutorInterrupted", error);
+        }
         catch (Exception error)
         {
             var code = error is PanelException known ? known.Code : "TaskFailed";
-            if (store.Task(task.Id).Phase is not ("Preflight" or "Save"))
+            var current = store.Task(task.Id);
+            if (current.State != "Queued" && current.Phase is not ("Preflight" or "Save"))
             {
                 try
                 {
@@ -140,15 +161,43 @@ public sealed class TaskWorker(SqliteStore store, InstanceService instances, Doc
                     var container = await docker.ContainerIdAsync(instance);
                     if (container is not null) await docker.CommandAsync(["stop", "--time", "120", container], TimeSpan.FromSeconds(135));
                 }
-                catch (Exception) { }
+                catch (Exception holdError)
+                {
+                    logger.LogWarning("Task {TaskId} could not be held ({ExceptionType}): {Detail}",
+                        task.Id, holdError.GetType().Name, LogRedactor.Detail(holdError.Message));
+                }
             }
-            var phase = store.Task(task.Id).Phase;
-            store.SetTask(task.Id, phase is "Preflight" or "Save" ? "Failed" : "NeedsAttention", phase, code,
-                message: "操作未完成；核实实际状态后处理，不会自动重跑。");
+            current = store.Task(task.Id);
+            var terminal = TaskOutcome.TerminalState(current.State, current.Phase);
+            store.SetTask(task.Id, terminal, current.Phase, code, message: "操作未完成；核实实际状态后处理，不会自动重跑。");
             store.Audit(task.User, task.InstanceId, task.Kind, code, task.Id);
+            Diagnose(task, terminal, current.Phase, code, error);
         }
         finally { instances.InvalidateObservation(task.InstanceId); }
+        }
+        catch (Exception error) { PreserveFault(task.Id, error); }
     }
+
+    private void PreserveFault(string id, Exception error)
+    {
+        try
+        {
+            var current = store.Task(id);
+            if (current.State is not ("Queued" or "Running")) return;
+            var terminal = TaskOutcome.TerminalState(current.State, current.Phase);
+            Diagnose(current, terminal, current.Phase, "ExecutorFault", error);
+            store.SetTask(id, terminal, current.Phase, "ExecutorFault", message: "任务未能由执行器完成，已停止自动继续。");
+        }
+        catch (Exception secondary)
+        {
+            logger.LogWarning("Task {TaskId} could not be preserved ({ExceptionType}): {Detail}",
+                id, secondary.GetType().Name, LogRedactor.Detail(secondary.Message));
+        }
+    }
+
+    private void Diagnose(TaskRecord task, string terminal, string phase, string code, Exception error) =>
+        logger.LogWarning("Task {TaskId} {Kind} at {Phase} ended {Terminal} code {Code} ({ExceptionType}): {Detail}",
+            task.Id, task.Kind, phase, terminal, code, error.GetType().Name, LogRedactor.Detail(error is PanelException ? error.Message : error.ToString()));
 
     private async Task MutateAsync(InstanceRecord instance, TaskRecord task, JsonElement payload, CancellationToken cancellation)
     {

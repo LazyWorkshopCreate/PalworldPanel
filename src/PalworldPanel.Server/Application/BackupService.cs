@@ -14,8 +14,7 @@ public sealed class BackupService(PanelOptions options, SqliteStore store, Insta
     public void Prune(InstanceRecord instance)
     {
         var records = store.Backups(instance.Id).OrderByDescending(b => b.CreatedUtc, StringComparer.Ordinal).ToArray();
-        var protectedIds = store.Tasks("Running").Concat(store.Tasks("Queued")).Concat(store.Tasks("NeedsAttention"))
-            .Select(t => t.RecoveryPoint).ToHashSet();
+        var protectedIds = store.ActiveTasks().Select(t => t.RecoveryPoint).ToHashSet();
         foreach (var record in records.Skip(1).Where(b => !b.Protected && !protectedIds.Contains(b.Id) &&
             DateTimeOffset.Parse(b.CreatedUtc) < DateTimeOffset.UtcNow.AddDays(-instance.RetentionDays)))
         {

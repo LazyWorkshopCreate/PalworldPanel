@@ -21,8 +21,7 @@ public sealed class InstanceService(PanelOptions options, SqliteStore store, Sec
 
     public async Task ValidateActionAsync(InstanceRecord instance, string kind, bool force, CancellationToken cancellation, string? executingTask = null)
     {
-        if (store.Tasks("Queued").Concat(store.Tasks("Running")).Concat(store.Tasks("NeedsAttention"))
-            .Any(t => t.InstanceId == instance.Id && t.Id != executingTask))
+        if (store.ActiveTasks().Any(t => t.InstanceId == instance.Id && t.Id != executingTask))
             throw new PanelException("TaskConflict", "实例有排队、执行中或待处理任务。", 409);
         var action = kind == "stop" && force ? "force-stop" : kind;
         if (!InstanceActionPolicy.Rules.TryGetValue(action, out var rule)) return;
@@ -67,7 +66,7 @@ public sealed class InstanceService(PanelOptions options, SqliteStore store, Sec
         var physical = hostMetrics.Sample(refresh: true);
         var available = OperatingSystem.IsWindows() && physical.AvailableMemoryBytes is { } free
             ? Math.Min(free, measured.AvailableBytes) : measured.AvailableBytes;
-        var pending = RuntimeMemory.PendingMiB(store.Tasks("Queued").Concat(store.Tasks("Running")), store.Instances(), instanceId);
+        var pending = RuntimeMemory.PendingMiB(store.TasksInStates("Queued", "Running"), store.Instances(), instanceId);
         RuntimeMemory.Check(available, rules.MemoryMiB, options.ReservedMemoryMiB, pending);
     }
 
@@ -231,6 +230,14 @@ public sealed class InstanceService(PanelOptions options, SqliteStore store, Sec
 
     public async Task<object> AddressViewAsync(InstanceRecord instance, CancellationToken cancellation)
     {
+        var sample = samples.GetOrAdd(instance.Id, _ => new Sample());
+        await sample.Gate.WaitAsync(cancellation);
+        try
+        {
+            if (sample.HasGameAddress && DateTimeOffset.UtcNow - sample.SampledUtc < TimeSpan.FromSeconds(5))
+                return View(instance, sample.GameAddress);
+        }
+        finally { sample.Gate.Release(); }
         string? address = null;
         try
         {
@@ -256,6 +263,8 @@ public sealed class InstanceService(PanelOptions options, SqliteStore store, Sec
         public SemaphoreSlim Gate { get; } = new(1);
         public DateTimeOffset SampledUtc;
         public JsonNode? Value;
+        public string? GameAddress;
+        public bool HasGameAddress;
     }
     private readonly ConcurrentDictionary<string, Sample> samples = new(StringComparer.Ordinal);
     public void InvalidateObservation(string id) => samples.TryRemove(id, out _);
@@ -271,6 +280,8 @@ public sealed class InstanceService(PanelOptions options, SqliteStore store, Sec
             {
                 sample.Value = JsonSerializer.SerializeToNode(await SampleAsync(instance, cancellation), DurableFile.Json)!;
                 sample.SampledUtc = DateTimeOffset.UtcNow;
+                sample.GameAddress = sample.Value["gameAddress"] is JsonValue address && address.TryGetValue<string>(out var resolved) ? resolved : null;
+                sample.HasGameAddress = true;
                 return sample.Value.DeepClone();
             }
             catch (Exception error) when (error is PanelException or HttpRequestException or TaskCanceledException)
@@ -288,6 +299,7 @@ public sealed class InstanceService(PanelOptions options, SqliteStore store, Sec
     private async Task<object> SampleAsync(InstanceRecord instance, CancellationToken cancellation)
     {
         var id = await docker.ContainerIdAsync(instance, cancellation);
+        string? gameAddress = null;
         var state = "stopped";
         var gameApi = "unreachable";
         JsonElement? metrics = null;
@@ -305,6 +317,7 @@ public sealed class InstanceService(PanelOptions options, SqliteStore store, Sec
         if (id is not null)
         {
             var inspect = await docker.InspectAsync(id, cancellation);
+            gameAddress = GameAddress.FromContainer(inspect, instance.GamePort, options.BindIp);
             state = inspect.GetProperty("State").GetProperty("Status").GetString() ?? "unknown";
             if (inspect.GetProperty("NetworkSettings").GetProperty("Ports").TryGetProperty("8211/udp", out var binding) && binding.ValueKind == JsonValueKind.Array)
                 udp = binding.EnumerateArray().Select(p => new { address = p.GetProperty("HostIp").GetString(), port = p.GetProperty("HostPort").GetString() }).ToArray();
@@ -336,7 +349,7 @@ public sealed class InstanceService(PanelOptions options, SqliteStore store, Sec
             days = Field(metrics, "days"), bases = Field(metrics, "basecampnum"),
             cpu, memoryBytes, publishedUdp = udp, udpEvidence = udp is null ? "unknown" : "mapping-observed",
             containerUdp, hostUdp, lanClient = "not-tested",
-            source = "Docker inspect / stats / game REST / Linux UDP sockets", stale = false };
+            source = "Docker inspect / stats / game REST / Linux UDP sockets", stale = false, gameAddress };
     }
 
     public static bool UdpSocketPresent(string table, int port) => table.Split('\n').Any(line =>
@@ -377,8 +390,7 @@ public sealed class InstanceService(PanelOptions options, SqliteStore store, Sec
 
     public void MigrateSourceHashes()
     {
-        var active = store.Tasks("Queued").Concat(store.Tasks("Running")).Concat(store.Tasks("NeedsAttention"))
-            .Select(t => t.InstanceId).ToHashSet();
+        var active = store.ActiveTasks().Select(t => t.InstanceId).ToHashSet();
         foreach (var instance in store.Instances().Where(i => i.SourceHash is not null && !i.SourceHash.StartsWith("v2:", StringComparison.Ordinal) && !active.Contains(i.Id)))
         {
             try

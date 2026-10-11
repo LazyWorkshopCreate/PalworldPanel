@@ -20,6 +20,12 @@ public static partial class LogRedactor
     [GeneratedRegex("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{9}Z")]
     private static partial Regex LogTimestamp();
 
+    public static string Detail(string? value)
+    {
+        var clean = Clean(value ?? "");
+        return clean.Length <= 4000 ? clean : clean[..4000];
+    }
+
     public static string Clean(string value, params string[] knownSecrets)
     {
         foreach (var secret in knownSecrets.Where(s => !string.IsNullOrEmpty(s)).SelectMany(secret => new[]

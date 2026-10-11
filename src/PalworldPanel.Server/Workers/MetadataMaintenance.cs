@@ -31,7 +31,7 @@ public sealed class MetadataMaintenance(PanelOptions options, SqliteStore store,
                 var instance = store.Instance(id);
                 using var instanceLock = DiskLock.AcquireInstance(options.StateRoot, instance.Root, instance.Id);
                 using var uploadLock = DiskLock.Acquire(Path.Combine(directory, "upload.lock"), createParent: false);
-                var active = store.Tasks("Queued").Concat(store.Tasks("Running")).Concat(store.Tasks("NeedsAttention")).ToArray();
+                var active = store.ActiveTasks().ToArray();
                 var referenced = new HashSet<string>(StringComparer.Ordinal);
                 foreach (var task in active.Where(task => task.InstanceId == id))
                 {

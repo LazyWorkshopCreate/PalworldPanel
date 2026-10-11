@@ -9,6 +9,9 @@ import { actionState, type ActionKind } from './instanceActionPolicy';
 import { ParameterSettings } from './ParameterSettings';
 import { ReadOnlyDashboard } from './ReadOnlyDashboard';
 import { InstanceInitialization } from './InstanceInitialization';
+import { BackupPolicyForm } from './BackupPolicyForm';
+import { PanelNotices } from './PanelNotices';
+import { WorldAccess } from './WorldAccess';
 import {
   Activity,
   ArrowLeft,
@@ -392,7 +395,8 @@ export function App() {
   const [pendingApplications, setPendingApplications] = useState<Record<string, string>>({});
   const [host, setHost] = useState<Host | null>(null);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
-  const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [statusError, setStatusError] = useState('');
   const { route, location, navigate } = usePanelRoute();
   const page = route.page;
   const selected = route.instanceId;
@@ -568,12 +572,12 @@ export function App() {
       setAllBackups(recoveryPoints);
       setAudit(auditEntries);
       setLastUpdate(new Date().toISOString());
-      setError('');
+      setStatusError('');
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
         setSession(null);
         setCsrf('');
-      } else setError(errorText(e));
+      } else setStatusError(errorText(e));
     }
   }, []);
   useEffect(() => {
@@ -592,7 +596,7 @@ export function App() {
       })
       .catch((e) => {
         if (!(e instanceof ApiError && e.status === 401)) {
-          setError(errorText(e));
+          setActionError(errorText(e));
           setSetupLoadFailed(true);
         }
       })
@@ -633,12 +637,13 @@ export function App() {
           });
           if (!controller.signal.aborted) setLogs(data.text);
         }
+        if (!controller.signal.aborted) setStatusError('');
       } catch (e) {
         if (!controller.signal.aborted) {
           setObserved((previous) =>
             previous?.instanceId === instance.id ? { ...previous, stale: true } : previous,
           );
-          setError(errorText(e));
+          setStatusError(errorText(e));
         }
       }
     };
@@ -697,6 +702,7 @@ export function App() {
       overview: '概览',
       settings: '设置',
       logs: '日志',
+      world: '世界',
       backups: '备份与恢复',
       tasks: '任务',
     };
@@ -712,7 +718,7 @@ export function App() {
     if (busy || instanceTaskLocked || (kind === 'apply-config' && applicationLocked)) return;
     actionOpener.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    setError('');
+    setActionError('');
     setConfirmation({ instance: item, kind, arguments: args });
   };
   const requestRecovery = async (task: TaskItem, resolution: string) => {
@@ -733,7 +739,7 @@ export function App() {
       setPlayersVerified(false);
       setRecovery({ task, resolution, token: preview.token, hash: preview.hash });
     } catch (error) {
-      setError(errorText(error));
+      setActionError(errorText(error));
     } finally {
       setBusy(false);
     }
@@ -743,7 +749,7 @@ export function App() {
       await api(`/tasks/${task.id}/cancel`, { method: 'POST' });
       await refresh();
     } catch (error) {
-      setError(errorText(error));
+      setActionError(errorText(error));
     }
   };
   if (initializing)
@@ -756,7 +762,7 @@ export function App() {
     return (
       <main className="login-page">
         <p role="alert" className="error">
-          {error}
+          {actionError}
         </p>
         <button onClick={() => window.location.reload()}>重试</button>
       </main>
@@ -852,7 +858,7 @@ export function App() {
               setInstancesLoaded(false);
               navigate('/dashboard', true);
             } catch (e) {
-              setError(errorText(e));
+              setActionError(errorText(e));
             }
           }}
         >
@@ -896,14 +902,11 @@ export function App() {
               )}
             </div>
           </div>
-          {error && (
-            <div className="error-box" role="alert">
-              {error}
-              <button className="ghost" onClick={() => setError('')}>
-                收起
-              </button>
-            </div>
-          )}
+          <PanelNotices
+            actionError={actionError}
+            statusError={statusError}
+            onDismissAction={() => setActionError('')}
+          />
           {!instance && (
             <div className="metrics">
               <Metric
@@ -948,7 +951,7 @@ export function App() {
                   onClick={() =>
                     void api<Candidate[]>('/discovery')
                       .then(setDiscovered)
-                      .catch((e) => setError(errorText(e)))
+                      .catch((e) => setActionError(errorText(e)))
                   }
                 >
                   接管既有实例
@@ -1061,7 +1064,7 @@ export function App() {
                         document.activeElement instanceof HTMLElement
                           ? document.activeElement
                           : null;
-                      setError('');
+                      setActionError('');
                       setUpgradeOpen(true);
                     }}
                   >
@@ -1164,6 +1167,7 @@ export function App() {
                   ['overview', '概览'],
                   ['settings', '设置'],
                   ['logs', '日志'],
+                  ['world', '世界'],
                   ['backups', '备份与恢复'],
                   ['tasks', '任务'],
                 ].map(([key, label]) => (
@@ -1296,7 +1300,7 @@ export function App() {
                       disabled={busy || instanceTaskLocked || !instance.writable}
                       onEdit={(kind, opener) => {
                         secretOpener.current = opener;
-                        setError('');
+                        setActionError('');
                         setSecretEditing(kind);
                       }}
                     />
@@ -1339,7 +1343,7 @@ export function App() {
                             });
                             await refresh();
                           } catch (e) {
-                            setError(errorText(e));
+                            setActionError(errorText(e));
                           } finally {
                             setBusy(false);
                           }
@@ -1382,64 +1386,28 @@ export function App() {
                     <pre className="logs">{logs || '尚无可用日志'}</pre>
                   </div>
                 )}
+                {tab === 'world' && (
+                  <WorldAccess
+                    instanceId={instance.id}
+                    userName={session || ''}
+                    disabled={busy || instanceTaskLocked || !instance.writable}
+                  />
+                )}
                 {tab === 'backups' && (
                   <div className="backup-layout">
                     <section className="card" aria-labelledby="scheduled-backup-title">
                       <h2 id="scheduled-backup-title">定时备份</h2>
                       <p className="muted">每日按北京时间执行离线备份。</p>
-                      <form
+                      <BackupPolicyForm
                         key={instance.id}
-                        className="backup-policy-form"
-                        onSubmit={async (event) => {
-                          event.preventDefault();
-                          const data = new FormData(event.currentTarget);
-                          setBusy(true);
-                          try {
-                            await api(`/instances/${instance.id}/backup-policy`, {
-                              method: 'PATCH',
-                              headers: { 'If-Match': String(instance.revision) },
-                              body: JSON.stringify({
-                                time: data.get('time'),
-                                retentionDays: Number(data.get('retention')),
-                              }),
-                            });
-                            await refresh();
-                          } catch (error) {
-                            setError(errorText(error));
-                          } finally {
-                            setBusy(false);
-                          }
-                        }}
-                      >
-                        <label>
-                          北京时间备份时间
-                          <input
-                            name="time"
-                            type="time"
-                            disabled={busy || instanceTaskLocked || !instance.writable}
-                            defaultValue={instance.backupTime}
-                            required
-                          />
-                        </label>
-                        <label>
-                          保留天数
-                          <input
-                            name="retention"
-                            disabled={busy || instanceTaskLocked || !instance.writable}
-                            type="number"
-                            min={1}
-                            max={365}
-                            defaultValue={instance.retentionDays}
-                            required
-                          />
-                        </label>
-                        <button
-                          className="primary"
-                          disabled={!instance.writable || busy || instanceTaskLocked}
-                        >
-                          保存备份策略
-                        </button>
-                      </form>
+                        instanceId={instance.id}
+                        revision={instance.revision}
+                        backupTime={instance.backupTime}
+                        retentionDays={instance.retentionDays}
+                        disabled={busy || instanceTaskLocked || !instance.writable}
+                        userName={session || ''}
+                        onSaved={refresh}
+                      />
                     </section>
                     <section className="card" aria-labelledby="manual-recovery-title">
                       <h2 id="manual-recovery-title">手动恢复</h2>
@@ -1539,7 +1507,7 @@ export function App() {
                                 setZipPreview(preview);
                                 setWorldSelection(preview.worlds[0] || '');
                               } catch (error) {
-                                setError(errorText(error));
+                                setActionError(errorText(error));
                               } finally {
                                 setBusy(false);
                                 event.target.value = '';
@@ -1774,7 +1742,7 @@ export function App() {
                   setDiscovered(null);
                   await refresh();
                 } catch (error) {
-                  setError(errorText(error));
+                  setActionError(errorText(error));
                 } finally {
                   setBusy(false);
                 }
@@ -1826,7 +1794,7 @@ export function App() {
               await refresh();
               navigate(instancePath(created.instanceId));
             } catch (error) {
-              setError(errorText(error));
+              setActionError(errorText(error));
             } finally {
               setBusy(false);
             }
@@ -2029,7 +1997,7 @@ export function App() {
                 setRecovery(null);
                 await refresh();
               } catch (error) {
-                setError(errorText(error));
+                setActionError(errorText(error));
               } finally {
                 setBusy(false);
               }

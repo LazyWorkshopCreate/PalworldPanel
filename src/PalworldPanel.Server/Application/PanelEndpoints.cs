@@ -14,6 +14,7 @@ public sealed record RecoveryRequest(string Resolution, bool OriginalPlayersVeri
 public sealed record ExportRequest(string Passphrase);
 public sealed record SecretsRequest(string? AdministratorPassword = null, string? GamePassword = null);
 public sealed record BackupPolicyRequest(string Time, int RetentionDays);
+public sealed record ModerationRequest(string Action, string UserId, string? Message);
 
 public static class PanelEndpoints
 {
@@ -88,6 +89,32 @@ public static class PanelEndpoints
             context.Response.Headers.ETag = $"\"{instance.Revision}\"";
             return Results.Ok(InstanceService.View(instance));
         });
+        api.MapGet("/instances/{id}/save-inventory", (string id, InstanceService service) =>
+        {
+            var instance = service.Store.Instance(id);
+            service.CheckRoot(instance);
+            if (instance.WorldGuid is null) throw new PanelException("UnknownWorld", "世界身份尚未核实。", 409);
+            return Results.Ok(SaveFiles.Read(WorldFiles.Find(SafePaths.Within(instance.Root, "data/Pal/Saved"), instance.WorldGuid)));
+        });
+        api.MapGet("/instances/{id}/world", async (string id, InstanceService service, DockerBackend docker, GameRestClient game, CancellationToken ct) =>
+        {
+            var instance = service.Store.Instance(id);
+            service.CheckRoot(instance);
+            var saveGames = Path.Combine(instance.Root, "data", "Pal", "Saved", "SaveGames");
+            var bans = Directory.Exists(saveGames) ? ServerBanList.Read(saveGames) : Array.Empty<string>();
+            var running = await InstanceRunning(docker, instance, ct);
+            WorldPlayerView[] online = [];
+            string? unavailable = running ? null : "实例未运行。列表仍包含曾经见到的玩家、封禁编号和现存的玩家存档。";
+            if (running)
+            {
+                (online, unavailable) = await WorldPlayers.ReadOnlineAsync(token => game.ReadAsync(instance, "players", token), ct);
+                if (unavailable is null) service.Store.RememberPlayers(instance.Id, online);
+            }
+            var saves = PlayerSaveIds(instance);
+            var players = WorldPlayers.Merge(service.Store.RememberedPlayers(instance.Id), online, bans, saves);
+            return Results.Ok(new { running, players, playersUnavailable = unavailable });
+        });
+        api.MapPost("/instances/{id}/moderation", ModerateInstanceAsync);
         api.MapGet("/instances/{id}/observations", async (string id, InstanceService service, CancellationToken ct) =>
             Results.Ok(await service.ObserveAsync(service.Store.Instance(id), ct)));
         api.MapGet("/instances/{id}/settings", async (string id, SqliteStore store, GameRestClient game, SecretVault vault, HttpContext context, CancellationToken ct) =>
@@ -115,7 +142,7 @@ public static class PanelEndpoints
             Match(context, instance);
             if (!instance.Writable) throw new PanelException("ReadOnlyInstance", "实例不能写入配置。", 409);
             service.CheckSource(instance);
-            if (store.Tasks("Queued").Concat(store.Tasks("Running")).Concat(store.Tasks("NeedsAttention")).Any(t => t.InstanceId == id))
+            if (store.ActiveTasks().Any(t => t.InstanceId == id))
                 throw new PanelException("TaskConflict", "实例有未结束任务。", 409);
             if (request.AdministratorPassword is null && request.GamePassword is null)
                 throw new PanelException("EmptySecretChange", "未提供密码变更。", 400);
@@ -133,6 +160,7 @@ public static class PanelEndpoints
         });
         api.MapPatch("/instances/{id}/backup-policy", (string id, BackupPolicyRequest request, HttpContext context, SqliteStore store, InstanceService service) =>
         {
+            AdministratorSecurity.RequireRecent(context.User);
             var instance = store.Instance(id);
             service.CheckRoot(instance);
             using var instanceLock = DiskLock.AcquireInstance(service.Options.StateRoot, instance.Root, instance.Id);
@@ -193,7 +221,7 @@ public static class PanelEndpoints
             Match(context, instance);
             if (!instance.Writable) throw new PanelException("ReadOnlyInstance", "实例尚未完成写入接管。", 409);
             service.CheckSource(instance);
-            if (service.Store.Tasks("Queued").Concat(service.Store.Tasks("Running")).Concat(service.Store.Tasks("NeedsAttention")).Any(t => t.InstanceId == id))
+            if (service.Store.ActiveTasks().Any(t => t.InstanceId == id))
                 throw new PanelException("TaskConflict", "实例有未结束任务。", 409);
             await service.ValidateBudgetAsync(instance, rules, ct);
             var updated = instance with { Name = rules.Name, Desired = rules, Revision = instance.Revision + 1 };
@@ -355,7 +383,7 @@ public static class PanelEndpoints
             var instance = service.Store.Instance(id);
             service.CheckRoot(instance);
             using var instanceLock = DiskLock.AcquireInstance(service.Options.StateRoot, instance.Root, instance.Id);
-            if (service.Store.Tasks("Queued").Concat(service.Store.Tasks("Running")).Concat(service.Store.Tasks("NeedsAttention")).Any(task => task.InstanceId == id && task.Kind == "import"))
+            if (service.Store.ActiveTasks().Any(task => task.InstanceId == id && task.Kind == "import"))
                 throw new PanelException("UploadInUse", "导入任务仍引用上传包，不能删除。", 409);
             File.Delete(SafePaths.Within(service.Options.StateRoot, $"uploads/{id}/{uploadId}.zip"));
             return Results.NoContent();
@@ -379,5 +407,62 @@ public static class PanelEndpoints
     {
         if (context.Request.Headers.IfMatch.ToString().Trim('"') != instance.Revision.ToString(System.Globalization.CultureInfo.InvariantCulture))
             throw new PanelException("RevisionConflict", "配置已经变化，请刷新预览。", 412);
+    }
+    public static async Task<IResult> ModerateInstanceAsync(string id, ModerationRequest request, HttpContext context,
+        InstanceService service, DockerBackend docker, GameRestClient game, CancellationToken ct)
+    {
+        AdministratorSecurity.RequireRecent(context.User);
+        var instance = service.Store.Instance(id);
+        service.CheckRoot(instance);
+        using var instanceLock = DiskLock.AcquireInstance(service.Options.StateRoot, instance.Root, instance.Id);
+        instance = service.Store.Instance(id);
+        service.CheckRoot(instance);
+        if (!instance.Writable) throw new PanelException("ReadOnlyInstance", "实例尚未完成写入接管。", 409);
+        if (service.Store.ActiveTasks().Any(task => task.InstanceId == id))
+            throw new PanelException("TaskConflict", "实例有未结束任务。", 409);
+        if (!ServerBanList.IsUserId(request.UserId)) throw new PanelException("InvalidPlayer", "玩家编号无效。", 400);
+        if (request.Message is { Length: > 80 } || request.Message?.Any(char.IsControl) == true)
+            throw new PanelException("InvalidSetting", "提示信息过长或包含控制字符。", 400);
+        var running = await InstanceRunning(docker, instance, ct);
+        if (request.Action == "kick")
+        {
+            if (!running) throw new PanelException("ServerStopped", "实例未运行，不能踢出玩家。", 409);
+            await game.ModerateAsync(instance, "kick", request.UserId, request.Message, ct);
+        }
+        else if (request.Action is "ban" or "unban")
+        {
+            if (running) await game.ModerateAsync(instance, request.Action, request.UserId, request.Message, ct);
+            else
+            {
+                var saveGames = SafePaths.Within(instance.Root, "data/Pal/Saved/SaveGames");
+                var bans = ServerBanList.Read(saveGames).ToList();
+                if (request.Action == "ban")
+                {
+                    if (bans.Contains(request.UserId, StringComparer.Ordinal)) throw new PanelException("AlreadyBanned", "该玩家已在封禁列表。", 409);
+                    bans.Add(request.UserId);
+                }
+                else if (!bans.Remove(request.UserId)) throw new PanelException("BanMissing", "封禁列表中没有该玩家。", 404);
+                ServerBanList.Write(saveGames, bans);
+            }
+        }
+        else throw new PanelException("UnsupportedAction", "不支持的连接控制。", 400);
+        service.Store.Audit(User(context), id, request.Action, "Succeeded");
+        return Results.NoContent();
+    }
+
+    private static IEnumerable<string> PlayerSaveIds(InstanceRecord instance)
+    {
+        if (instance.WorldGuid is null) return [];
+        try
+        {
+            var world = WorldFiles.Find(SafePaths.Within(instance.Root, "data/Pal/Saved"), instance.WorldGuid);
+            return SaveFiles.PlayerIds(world);
+        }
+        catch (PanelException) { return []; }
+    }
+    private static async Task<bool> InstanceRunning(DockerBackend docker, InstanceRecord instance, CancellationToken cancellation)
+    {
+        var container = await docker.ContainerIdAsync(instance, cancellation);
+        return container is not null && (await docker.InspectAsync(container, cancellation)).GetProperty("State").GetProperty("Running").GetBoolean();
     }
 }

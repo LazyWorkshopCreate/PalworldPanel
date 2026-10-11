@@ -1,6 +1,6 @@
 import React, { useSyncExternalStore } from 'react';
 
-export const instanceTabs = ['overview', 'settings', 'logs', 'backups', 'tasks'] as const;
+export const instanceTabs = ['overview', 'settings', 'logs', 'world', 'backups', 'tasks'] as const;
 export type InstanceTab = (typeof instanceTabs)[number];
 export type PanelRoute = {
   page: 'home' | 'dashboard' | 'login' | 'setup' | 'instances' | 'host' | 'not-found';
@@ -21,7 +21,9 @@ export function parseRoute(location: string): PanelRoute {
     if (path === `/${page}`) return { ...base, page };
   }
   const match =
-    /^\/instances\/([A-Za-z0-9_-]{1,128})(?:\/(overview|settings|logs|backups|tasks))?$/.exec(path);
+    /^\/instances\/([A-Za-z0-9_-]{1,128})(?:\/(overview|settings|logs|world|backups|tasks))?$/.exec(
+      path,
+    );
   if (match) {
     const tab = (match[2] || 'overview') as InstanceTab;
     return { page: 'instances', instanceId: match[1], tab, path: instancePath(match[1], tab) };

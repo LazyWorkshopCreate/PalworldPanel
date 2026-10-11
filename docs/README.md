@@ -18,6 +18,8 @@
 
 | 文档 | 用途 |
 |---|---|
+| [公开 rc.3 快照准备](verification/2026-10-12-public-rc3-preparation.md) | 汇总来源、脱敏、本机检查与云端验收边界 |
+| [v0.1.0-rc.3 版本说明](releases/2026-10-11-v0.1.0-rc.3.md) | 世界管理、任务故障隔离、备份补试及实例切换和互斥修复 |
 | [v0.1.0-rc.2 版本说明](releases/2026-10-07-v0.1.0-rc.2.md) | URL 路由、更新检查、操作互斥、实时内存准入与 Linux 接管修复 |
 | [rc.2 发行验证](verification/2026-10-07-rc2-release.md) | 公开仓库发行流水线、资产校验与仅 tag 网站部署 |
 | [示例 Linux 主机 Linux 接管与验收](verification/2026-10-07-linux-acceptance.md) | 管理员初始化、两实例完整接管、Linux API/UI 流程、修复与验证边界 |
@@ -92,3 +94,9 @@
 [内存展示与检查](requirements/2026-10-07-memory-admission.md) / [设计](design/2026-10-07-memory-admission.md) / [计划](planning/2026-10-07-memory-admission.md) / [验收](verification/2026-10-07-memory-admission.md)：REQ-20 / W24，按实时可用内存准入。
 
 - [示例 Linux 主机 初次部署快照](operations/2026-10-07-linux-deployment.md)：初次部署时的只读范围；后续两台既有实例写接管及当前状态见 [Linux 验收](verification/2026-10-07-linux-acceptance.md)。
+
+- [世界管理审查修复](verification/2026-10-11-world-management-review-fixes.md)：REQ-23 / W27.4，实例锁、切换隔离、读取降级和周期采样的回归证据。
+
+[运行可维护性需求](requirements/2026-10-10-runtime-maintainability.md) / [设计](design/2026-10-10-runtime-maintainability.md) / [计划](planning/2026-10-10-runtime-maintainability.md) / [验收](verification/2026-10-10-runtime-maintainability.md)：REQ-21 / W25，任务故障隔离、脱敏诊断、定时备份预检补试、备份策略近期认证和采样提示分离。
+
+[世界管理调研](research/2026-10-10-world-and-save-data.md) / [需求](requirements/2026-10-10-world-management.md) / [设计](design/2026-10-10-world-management.md) / [计划](planning/2026-10-10-world-management.md) / [ADR-013](adr/013-withdraw-player-isolation.md) / [验收](verification/2026-10-10-world-management.md)：REQ-23 / W27，踢出和封禁。数值编辑和玩家存档隔离已撤销。

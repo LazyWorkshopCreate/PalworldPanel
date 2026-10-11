@@ -7,6 +7,10 @@ namespace PalworldPanel.Server.Infrastructure;
 
 public sealed class SqliteStore
 {
+    private static readonly HashSet<string> TaskStates = new(StringComparer.Ordinal)
+    {
+        "Queued", "Running", "NeedsAttention", "Failed", "Succeeded", "Cancelled", "RolledBack"
+    };
     private static readonly object ProviderLock = new();
     private static bool initialized;
     private readonly string connectionString;
@@ -56,6 +60,8 @@ public sealed class SqliteStore
               result TEXT NOT NULL, taskId TEXT);
             CREATE TABLE IF NOT EXISTS taskEvents(sequence INTEGER PRIMARY KEY AUTOINCREMENT,
               taskId TEXT NOT NULL, utc TEXT NOT NULL, phase TEXT NOT NULL, state TEXT NOT NULL, code TEXT);
+            CREATE TABLE IF NOT EXISTS worldPlayers(instanceId TEXT NOT NULL, userId TEXT NOT NULL,
+              name TEXT, level INTEGER, playerId TEXT, PRIMARY KEY(instanceId, userId));
             PRAGMA user_version=1;
             """;
         command.ExecuteNonQuery();
@@ -83,7 +89,48 @@ public sealed class SqliteStore
         command.Parameters.AddWithValue("$doc", JsonSerializer.Serialize(instance, DurableFile.Json));
         command.ExecuteNonQuery();
     }
-    public void ForgetInstance(string id) => Execute("DELETE FROM instances WHERE id=$id", ("$id", id));
+    public void ForgetInstance(string id) => Execute(
+        "DELETE FROM worldPlayers WHERE instanceId=$id; DELETE FROM instances WHERE id=$id", ("$id", id));
+
+    public WorldPlayerView[] RememberedPlayers(string instanceId)
+    {
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT userId,name,level,playerId FROM worldPlayers WHERE instanceId=$id ORDER BY userId";
+        command.Parameters.AddWithValue("$id", instanceId);
+        using var reader = command.ExecuteReader();
+        var items = new List<WorldPlayerView>();
+        while (reader.Read())
+            items.Add(new(reader.GetString(0), reader.IsDBNull(1) ? null : reader.GetString(1),
+                reader.IsDBNull(2) ? null : reader.GetInt32(2), reader.IsDBNull(3) ? null : reader.GetString(3)));
+        return items.ToArray();
+    }
+
+    public void RememberPlayers(string instanceId, IReadOnlyList<WorldPlayerView> players)
+    {
+        using var connection = Open();
+        using var transaction = connection.BeginTransaction();
+        foreach (var player in players)
+        {
+            if (!ServerBanList.IsUserId(player.UserId)) continue;
+            using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = """
+                INSERT INTO worldPlayers(instanceId,userId,name,level,playerId) VALUES($instance,$user,$name,$level,$player)
+                ON CONFLICT(instanceId,userId) DO UPDATE SET
+                  name=COALESCE(excluded.name, worldPlayers.name),
+                  level=COALESCE(excluded.level, worldPlayers.level),
+                  playerId=COALESCE(excluded.playerId, worldPlayers.playerId)
+                """;
+            command.Parameters.AddWithValue("$instance", instanceId);
+            command.Parameters.AddWithValue("$user", player.UserId);
+            command.Parameters.AddWithValue("$name", (object?)player.Name ?? DBNull.Value);
+            command.Parameters.AddWithValue("$level", (object?)player.Level ?? DBNull.Value);
+            command.Parameters.AddWithValue("$player", (object?)player.PlayerId ?? DBNull.Value);
+            command.ExecuteNonQuery();
+        }
+        transaction.Commit();
+    }
 
     public TaskRecord Enqueue(string instanceId, string kind, string payload, string user, string key, string requestHash)
     {
@@ -131,10 +178,44 @@ public sealed class SqliteStore
         using var command = connection.CreateCommand();
         command.CommandText = state is null ? "SELECT * FROM tasks ORDER BY createdUtc DESC LIMIT 200" : "SELECT * FROM tasks WHERE state=$state ORDER BY createdUtc";
         if (state is not null) command.Parameters.AddWithValue("$state", state);
-        using var reader = command.ExecuteReader();
-        var items = new List<TaskRecord>();
-        while (reader.Read()) items.Add(ReadTask(reader));
-        return items;
+        return ReadTasks(command);
+    }
+
+    public IReadOnlyList<TaskRecord> TasksInStates(params string[] states)
+    {
+        if (states.Length == 0 || states.Any(state => !TaskStates.Contains(state)))
+            throw new ArgumentOutOfRangeException(nameof(states));
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        var names = new string[states.Length];
+        for (var index = 0; index < states.Length; index++)
+        {
+            names[index] = "$state" + index;
+            command.Parameters.AddWithValue(names[index], states[index]);
+        }
+        command.CommandText = "SELECT * FROM tasks WHERE state IN (" + string.Join(",", names) + ") ORDER BY createdUtc";
+        return ReadTasks(command);
+    }
+
+    public IReadOnlyList<TaskRecord> ActiveTasks() => TasksInStates("Queued", "Running", "NeedsAttention");
+
+    public IReadOnlyList<TaskRecord> SchedulerAttempts(string instanceId, string day)
+    {
+        if (!Guid.TryParseExact(instanceId, "N", out _) ||
+            !DateOnly.TryParseExact(day, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _))
+            throw new PanelException("InvalidScheduleKey", "调度身份无效。", 400);
+        var prefix = "schedule-" + instanceId + "-" + day;
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT * FROM tasks WHERE user=$user AND kind=$kind AND (idempotencyKey=$prefix OR idempotencyKey LIKE $retry ESCAPE '\')
+            ORDER BY createdUtc
+            """;
+        command.Parameters.AddWithValue("$user", "scheduler");
+        command.Parameters.AddWithValue("$kind", "backup");
+        command.Parameters.AddWithValue("$prefix", prefix);
+        command.Parameters.AddWithValue("$retry", prefix + "-retry-%");
+        return ReadTasks(command);
     }
     public TaskRecord Task(string id)
     {
@@ -244,6 +325,14 @@ public sealed class SqliteStore
         command.CommandText = sql;
         foreach (var p in parameters) command.Parameters.AddWithValue(p.Key, (object?)p.Value ?? DBNull.Value);
         command.ExecuteNonQuery();
+    }
+
+    private static IReadOnlyList<TaskRecord> ReadTasks(SqliteCommand command)
+    {
+        using var reader = command.ExecuteReader();
+        var items = new List<TaskRecord>();
+        while (reader.Read()) items.Add(ReadTask(reader));
+        return items;
     }
 
     private static TaskRecord ReadTask(SqliteDataReader reader) => new(reader.GetString(0), reader.GetString(1),

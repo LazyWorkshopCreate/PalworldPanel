@@ -19,9 +19,11 @@ public sealed class BackupScheduler(SqliteStore store, IHostApplicationLifetime 
                 if (!TimeOnly.TryParseExact(instance.BackupTime, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var scheduled)) continue;
                 var now = TimeOnly.FromDateTime(local.DateTime);
                 if (now < scheduled) continue;
-                var key = $"schedule-{instance.Id}-{local:yyyy-MM-dd}";
+                var day = local.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                var key = BackupSchedule.NextKey(instance.Id, day, store.SchedulerAttempts(instance.Id, day));
+                if (key is null) continue;
                 try { store.Enqueue(instance.Id, "backup", "{}", "scheduler", key, InstanceService.Hash(key)); }
-                catch (PanelException error) when (error.Code == "TaskConflict") { /* No overlapping or destructive retry. */ }
+                catch (PanelException error) when (error.Code is "TaskConflict" or "IdempotencyConflict") { /* No overlapping or destructive retry. */ }
             }
             await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
         }

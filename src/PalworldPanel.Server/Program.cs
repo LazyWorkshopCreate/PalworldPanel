@@ -14,7 +14,7 @@ using PalworldPanel.Server.Workers;
 if (args.Length == 2 && args[0] == "--quarantine-pending-tasks")
 {
     var store = new SqliteStore(args[1]);
-    foreach (var task in store.Tasks("Queued").Concat(store.Tasks("Running")))
+    foreach (var task in store.TasksInStates("Queued", "Running"))
         store.SetTask(task.Id, "NeedsAttention", task.Phase, "DatabaseRestored", message: "灾备恢复后的旧任务必须逐项核实，不自动重放。");
     Console.WriteLine("待执行及执行中任务已转为人工核实，未连接 Docker 或游戏。");
     return;
@@ -22,7 +22,7 @@ if (args.Length == 2 && args[0] == "--quarantine-pending-tasks")
 if (args.Length == 2 && args[0] == "--check-idle")
 {
     var store = new SqliteStore(args[1]);
-    if (store.Tasks("Queued").Concat(store.Tasks("Running")).Concat(store.Tasks("NeedsAttention")).Any())
+    if (store.ActiveTasks().Count > 0)
         throw new InvalidOperationException("存在排队、运行或待处理任务，拒绝升级/卸载。请先等待或处理任务。");
     Console.WriteLine("没有排队、运行或待处理任务。");
     return;

@@ -13,7 +13,7 @@ import {
 afterEach(cleanup);
 
 it('实例页签具有可刷新路径，概览别名及尾部斜杠规范化', () => {
-  for (const tab of ['overview', 'settings', 'logs', 'backups', 'tasks'] as const) {
+  for (const tab of ['overview', 'settings', 'logs', 'world', 'backups', 'tasks'] as const) {
     expect(parseRoute(instancePath('synthetic', tab))).toMatchObject({
       page: 'instances',
       instanceId: 'synthetic',
@@ -23,6 +23,7 @@ it('实例页签具有可刷新路径，概览别名及尾部斜杠规范化', (
   expect(parseRoute('/instances/synthetic/overview/').path).toBe('/instances/synthetic');
   expect(parseRoute('/host/').path).toBe('/host');
   expect(parseRoute('/index.html')).toMatchObject({ page: 'home', path: '/' });
+  expect(parseRoute('/instances/synthetic/saves').page).toBe('not-found');
   expect(parseRoute('/instances/synthetic/bad').page).toBe('not-found');
   expect(parseRoute('/instances/%2Fetc').page).toBe('not-found');
 });

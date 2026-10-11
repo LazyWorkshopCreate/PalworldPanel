@@ -8,15 +8,15 @@
 
 - 首个 annotated tag：v0.1.0-rc.1，已推送 origin。
 - 发行源码：de9e5cf6d84de1b1ba0c93eebc25704023630dce。tag 未移动。
-- [源码 CI](https://github.com/DeronQi/PalworldPanel/actions/runs/37490397927)：成功。
-- [权限修复 CI](https://github.com/DeronQi/PalworldPanel/actions/runs/37493983788)：成功。
-- [发行流水线](https://github.com/DeronQi/PalworldPanel/actions/runs/37493771138)：最终结果与下载验证见下文。
+- 源码 CI（历史开发验证，私有链接已省略）：成功。
+- 权限修复 CI（历史开发验证，私有链接已省略）：成功。
+- 发行流水线（历史开发验证，私有链接已省略）：最终结果与下载验证见下文。
 
 ## 网站发布与环境规则
 
 首次 tag 触发的 Pages 构建在读取站点配置时失败，原因是缺少 pages:read。修复提交 8ba3359 增加构建任务的 pages:read，并临时提供指定 tag 的恢复入口。
 
-[恢复部署](https://github.com/DeronQi/PalworldPanel/actions/runs/37493986879)第一次执行被环境的 tag 规则拦截；临时允许 main 后，重跑成功。部署读取的是 v0.1.0-rc.1 的 website 源码，未改动 tag。
+恢复部署（历史开发验证，私有链接已省略）第一次执行被环境的 tag 规则拦截；临时允许 main 后，重跑成功。部署读取的是 v0.1.0-rc.1 的 website 源码，未改动 tag。
 
 用户明确要求网站只允许 tag 部署后，立即移除临时 main 环境规则与手动恢复入口。最终 github-pages 环境仅有一条规则：type=tag，name=v*。工作流只由 v* tag 推送触发，main 不部署网站；后续修复通过新版本 tag 发布。
 
@@ -24,9 +24,9 @@
 
 ## 发行产物
 
-[发行流水线](https://github.com/DeronQi/PalworldPanel/actions/runs/37493771138)全部成功：版本与说明校验、Windows/Linux CI、容器测试与镜像构建、两平台打包、资产校验和 GitHub Release 发布均通过。
+发行流水线（历史开发验证，私有链接已省略）全部成功：版本与说明校验、Windows/Linux CI、容器测试与镜像构建、两平台打包、资产校验和 GitHub Release 发布均通过。
 
-[v0.1.0-rc.1](https://github.com/DeronQi/PalworldPanel/releases/tag/v0.1.0-rc.1)已发布为 prerelease，非 draft；私有仓库下载仍需访问权限。四个资产已上传：
+v0.1.0-rc.1（历史开发验证，私有链接已省略）已发布为 prerelease，非 draft；历史开发仓库下载需要访问权限；公开发行以公开仓库对应版本为准。四个资产已上传：
 
 | 文件 | 字节数 | SHA-256（GitHub 资产摘要） |
 |---|---:|---|

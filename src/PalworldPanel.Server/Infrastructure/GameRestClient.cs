@@ -53,6 +53,18 @@ public sealed class GameRestClient(SecretVault vault)
         if (!response.IsSuccessStatusCode) throw new PanelException("AnnounceFailed", "维护公告失败。", 409);
     }
 
+    public async Task ModerateAsync(InstanceRecord instance, string action, string userId, string? message, CancellationToken cancellation = default)
+    {
+        if (action is not ("kick" or "ban" or "unban")) throw new InvalidOperationException("不支持的连接控制。");
+        var body = action == "unban"
+            ? JsonSerializer.Serialize(new { userid = userId })
+            : JsonSerializer.Serialize(new { userid = userId, message = message ?? "" });
+        using var request = Create(instance, HttpMethod.Post, action);
+        request.Content = new StringContent(body, Encoding.UTF8, "application/json");
+        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellation);
+        if (!response.IsSuccessStatusCode) throw new PanelException("ModerationRejected", "游戏没有接受这次连接控制。", 409);
+    }
+
     private HttpRequestMessage Create(InstanceRecord instance, HttpMethod method, string endpoint)
     {
         if (instance.RestPort is < 1024 or > 65535) throw new PanelException("InvalidPort", "游戏 API 端口无效。", 409);

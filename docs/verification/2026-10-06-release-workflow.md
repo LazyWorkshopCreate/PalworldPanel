@@ -12,8 +12,8 @@
 | 版本与资产契约 | Passed | 3 项 Node 测试覆盖无效版本、版本不匹配、缺失/空/重复说明、缺失/多余/空资产、校验值与重跑 |
 | 官网静态内容 | Passed | 四文件白名单、相对资源、锚点和静态内容检查 |
 | Windows 构建脚本 | Passed | PowerShell 解析无错误；云端真实编译 Inno 7.1.0 安装包 |
-| 日常 CI | Passed | [运行 37477399904](https://github.com/DeronQi/PalworldPanel/actions/runs/37477399904)，Windows/Linux 后端各 94 项、前端各 53 项；容器后端 94 项及应用镜像构建通过 |
-| 只打包演练 | Passed | [运行 37477401310](https://github.com/DeronQi/PalworldPanel/actions/runs/37477401310)，复用 CI、Linux 镜像归档、Windows ZIP/EXE、精确三文件及 SHA256SUMS 汇总均通过；publish 为 skipped |
+| 日常 CI | Passed | 运行 37477399904（历史开发验证，私有链接已省略），Windows/Linux 后端各 94 项、前端各 53 项；容器后端 94 项及应用镜像构建通过 |
+| 只打包演练 | Passed | 运行 37477401310（历史开发验证，私有链接已省略），复用 CI、Linux 镜像归档、Windows ZIP/EXE、精确三文件及 SHA256SUMS 汇总均通过；publish 为 skipped |
 | Pages 环境规则 | Passed | 实际 github-pages 环境仅允许 v* 类型 tag，替代旧 main 分支规则 |
 | 发布状态 | Passed | 演练后仓库仍为 private；GitHub tags 和 Releases 均为 0；本机服务与实例未变更 |
 | 演练资产本机复核 | Passed | release-bundle 延迟后下载完成；三个 SHA256 匹配；ZIP CRC、程序、wwwroot/index.html、version.json 齐全；EXE FileVersion/ProductVersion 为 0.1.20；Docker 归档为 linux/amd64，镜像 tag 与 OCI version 均为 0.1.20 |

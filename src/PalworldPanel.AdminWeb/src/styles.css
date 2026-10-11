@@ -386,6 +386,28 @@ th {
 td {
   line-height: 1.5;
 }
+.player-table th,
+.player-table td {
+  vertical-align: middle;
+}
+.player-table th:nth-child(1),
+.player-table td:nth-child(1) {
+  text-align: left;
+}
+.player-table th:nth-child(2),
+.player-table td:nth-child(2) {
+  text-align: center;
+}
+.player-table th:nth-child(3),
+.player-table td:nth-child(3) {
+  text-align: right;
+}
+.player-table td:nth-child(3) .actions {
+  justify-content: flex-end;
+}
+.player-table table {
+  min-width: 0;
+}
 footer {
   max-width: 1440px;
   margin: 0 auto;

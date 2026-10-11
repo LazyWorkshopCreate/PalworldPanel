@@ -1,17 +1,23 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using PalworldPanel.Server.Domain;
 
 namespace PalworldPanel.Server.Infrastructure;
 
-public sealed record CommandResult(int ExitCode, string Output);
+public sealed record CommandResult(int ExitCode, string Output, string Error = "");
 
 public sealed class DockerBackend
 {
     private readonly PanelOptions? options;
+    private readonly ILogger<DockerBackend>? logger;
     public DockerBackend() { }
-    public DockerBackend(PanelOptions options) => this.options = options;
+    public DockerBackend(PanelOptions options, ILogger<DockerBackend>? logger = null)
+    {
+        this.options = options;
+        this.logger = logger;
+    }
     public async Task<CommandResult> RunAsync(IEnumerable<string> arguments, TimeSpan timeout,
         string? workingDirectory = null, CancellationToken cancellation = default, bool captureLogErrors = false)
     {
@@ -47,7 +53,7 @@ public sealed class DockerBackend
         // Only the fixed logs adapter may merge stderr, and must redact before returning it.
         var errors = await stderr;
         if (captureLogErrors) output = (output + errors)[..Math.Min(output.Length + errors.Length, 2 * 1024 * 1024)];
-        return new(process.ExitCode, output);
+        return new(process.ExitCode, output, errors);
     }
 
     public async Task<JsonElement> InspectAsync(string container, CancellationToken cancellation = default)
@@ -79,7 +85,12 @@ public sealed class DockerBackend
         CancellationToken cancellation = default)
     {
         var result = await RunAsync(args, timeout, workingDirectory, cancellation);
-        if (result.ExitCode != 0) throw new PanelException("DockerCommandFailed", "Docker 操作失败，请核实目标状态。", 409);
+        if (result.ExitCode != 0)
+        {
+            logger?.LogWarning("Docker command {Command} exited {ExitCode}: {Detail}",
+                args.Length == 0 ? "docker" : args[0], result.ExitCode, LogRedactor.Detail(result.Error));
+            throw new PanelException("DockerCommandFailed", "Docker 操作失败，请核实目标状态。", 409);
+        }
     }
 
     public async Task UpdateInstallationAsync(InstanceRecord instance, string taskId, CancellationToken cancellation)

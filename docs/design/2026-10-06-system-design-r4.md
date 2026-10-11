@@ -198,7 +198,7 @@ palworld-server-2 运行   健康      LAN 未实测       --/--      外部快�
 
 锁顺序固定：需要时宿主分配锁 → 实例锁；端口登记完成即释放宿主锁。恢复/备份持实例锁全程，重安装和大复制再取宿主重 IO semaphore（初值 1），同时其他实例读采样继续。不能在持实例锁时再申请分配锁；已选实例端口更改也按同顺序。跨实例任务可以轻量并行，不能以全局 Web 请求锁卡死监控。
 
-任务先在 SQLite 入队，执行器有界轮询数据库，不以进程内通知承担持久性。阶段执行前写意图/fsync，执行后写结果/校验；SQLite 与文件切换通过 journal 恢复，不能承诺事务性 exactly-once。子进程固定 executable + ArgumentList，不用 shell 字符串；固定 project/service/工作目录，截断脱敏输出。面板绑定成功后才启动 worker；中断任务转 NeedsAttention、限制重启策略，不自动重放交换，人工依据 journal 回退或接受。
+任务先在 SQLite 入队，执行器有界轮询数据库，不以进程内通知承担持久性。阶段执行前写意图/fsync，执行后写结果/校验；SQLite 与文件切换通过 journal 恢复，不能承诺事务性 exactly-once。子进程固定 executable + ArgumentList，不用 shell 字符串；固定 project/service/工作目录，截断脱敏输出。面板绑定成功后才启动 worker；中断任务转 NeedsAttention、限制重启策略，不自动重放交换，人工依据 journal 回退或接受。2026-10-10 补充：单条任务故障不得停止执行器；诊断只进脱敏日志。定时备份的预检补试见[运行可维护性设计](2026-10-10-runtime-maintainability.md)。谁可以连接见[世界管理设计](2026-10-10-world-management.md)。面板不修改存档正文。
 
 | 操作 | 阶段与成功条件 | 失败处理 |
 |---|---|---|
@@ -282,7 +282,7 @@ CPU 来自 Engine stats 的 delta 归一化，多核总百分比和“占分配�
 
 ## 12. 管理安全与面板自身恢复（REQ-01）
 
-后端以 root 运行且可管理 Docker，源 IP 白名单是入口条件，不能代替管理员身份。管理员初次账号在 Windows 网站首次访问时设置并生成 hash，Linux 保留宿主 CLI 初始化，禁止公开注册/默认密码；采用框架安全密码哈希，登录限流（初始连续 5 次失败暂锁 15 分钟），直接 LAN HTTPS、Cookie HttpOnly/SameSite/Secure。证书使用可信内网 CA 或管理员管理的证书，私钥放宿主受限 secret 文件区，示例只有占位符。会话闲置初始 30 分钟过期，危险恢复/清理/备份下载要求近期重新认证（初始 5 分钟）。登录本身校验 Origin/CSRF，写 API 禁止 GET 副作用。
+后端以 root 运行且可管理 Docker，源 IP 白名单是入口条件，不能代替管理员身份。管理员初次账号在 Windows 网站首次访问时设置并生成 hash，Linux 保留宿主 CLI 初始化，禁止公开注册/默认密码；采用框架安全密码哈希，登录限流（初始连续 5 次失败暂锁 15 分钟），直接 LAN HTTPS、Cookie HttpOnly/SameSite/Secure。证书使用可信内网 CA 或管理员管理的证书，私钥放宿主受限 secret 文件区，示例只有占位符。会话闲置初始 30 分钟过期，危险恢复/清理/备份下载以及会改变保留期的备份策略要求近期重新认证（初始 5 分钟）。登录本身校验 Origin/CSRF，写 API 禁止 GET 副作用。
 
 ### 内网 IP 白名单
 
