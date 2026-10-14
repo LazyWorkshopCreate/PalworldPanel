@@ -20,7 +20,7 @@
 
 用户明确要求网站只允许 tag 部署后，立即移除临时 main 环境规则与手动恢复入口。最终 github-pages 环境仅有一条规则：type=tag，name=v*。工作流只由 v* tag 推送触发，main 不部署网站；后续修复通过新版本 tag 发布。
 
-线上检查：[公开官网](https://deronqi.github.io/PalworldPanel/)的 12 个中文/英文 HTML 页面均返回 HTTP 200，内容逐页与发行源码一致；8 张控制台文档截图均返回 HTTP 200。覆盖首页、文档列表、功能说明、使用指南、发布列表与 v0.1.0-rc.1 详情的两种语言。
+线上检查：[公开官网](https://lazyworkshopcreate.github.io/PalworldPanel/)的 12 个中文/英文 HTML 页面均返回 HTTP 200，内容逐页与发行源码一致；8 张控制台文档截图均返回 HTTP 200。覆盖首页、文档列表、功能说明、使用指南、发布列表与 v0.1.0-rc.1 详情的两种语言。
 
 ## 发行产物
 
@@ -42,3 +42,5 @@ Windows ZIP 包含 PalworldPanel.Server.exe 与 wwwroot/index.html；Linux 镜�
 ## 验证边界
 
 云端构建与文件校验不代表本次已在目标 Windows 主机安装新包，也不代表真实玩家连接验收。本次不安装程序、不重启本机游戏实例、不修改运行数据。
+
+公开整理说明：站点链接指向当前开源官网，历史私有站点地址不公开；历史检查结论仅针对当时版本。

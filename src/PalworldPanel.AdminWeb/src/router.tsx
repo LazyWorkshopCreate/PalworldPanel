@@ -3,7 +3,8 @@ import React, { useSyncExternalStore } from 'react';
 export const instanceTabs = ['overview', 'settings', 'logs', 'world', 'backups', 'tasks'] as const;
 export type InstanceTab = (typeof instanceTabs)[number];
 export type PanelRoute = {
-  page: 'home' | 'dashboard' | 'login' | 'setup' | 'instances' | 'host' | 'not-found';
+  page:
+    'home' | 'dashboard' | 'login' | 'setup' | 'instances' | 'host' | 'world-view' | 'not-found';
   instanceId: string | null;
   tab: InstanceTab;
   path: string;
@@ -17,6 +18,9 @@ export function parseRoute(location: string): PanelRoute {
   const path = location.split(/[?#]/)[0].replace(/\/+$/, '') || '/';
   const base = { instanceId: null, tab: 'overview' as InstanceTab, path };
   if (path === '/' || path === '/index.html') return { ...base, path: '/', page: 'home' };
+  const worldMatch = /^\/world-view\/[a-fA-F0-9]{32}(?:\/(settings|backups|logs))?$/.exec(path);
+  if (path === '/world-view' || worldMatch)
+    return { ...base, page: 'world-view', tab: (worldMatch?.[1] || 'settings') as InstanceTab };
   for (const page of ['dashboard', 'login', 'setup', 'instances', 'host'] as const) {
     if (path === `/${page}`) return { ...base, page };
   }

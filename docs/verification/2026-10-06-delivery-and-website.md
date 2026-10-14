@@ -12,7 +12,7 @@
 
 ## 官网与本地检查
 
-GitHub 已启用 build_type=workflow、HTTPS，源码仓库仍 private=true。官网公开地址：https://deronqi.github.io/PalworldPanel/ 。仅 website 四个静态文件进入 Pages，内部 docs、配置、数据和管理控制台不发布。构建产物受私有仓库权限限制。
+GitHub 已启用 build_type=workflow、HTTPS，源码仓库仍 private=true。历史站点地址已脱敏；当前开源官网为 https://lazyworkshopcreate.github.io/PalworldPanel/ 。仅 website 四个静态文件进入 Pages，内部 docs、配置、数据和管理控制台不发布。构建产物受私有仓库权限限制。
 
 本地 Test-Website.mjs：部署文件白名单、相对路径、资源、锚点和静态内容检查 Passed。Prettier 与 65 篇文档结构检查 Passed。
 

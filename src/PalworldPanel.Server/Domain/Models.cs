@@ -14,7 +14,7 @@ public sealed record GameRules(string Name, string Description = "", int MaxPlay
     public void Validate()
     {
         GameSettingCatalog.Validate(Additional);
-        if (Name is null || Description is null || Name.Length is < 1 or > 64 || Name.Any(char.IsControl) || Description.Length > 256 || Description.Any(char.IsControl) ||
+        if (string.IsNullOrWhiteSpace(Name) || Description is null || Name.Length > 64 || Name.Any(char.IsControl) || Description.Length > 256 || Description.Any(char.IsControl) ||
             MaxPlayers is < 1 or > 32 || DeathPenalty is not ("None" or "Item" or "ItemAndEquipment" or "All") ||
             !double.IsFinite(DeteriorationRate) || DeteriorationRate is < 0 or > 100 ||
             !double.IsFinite(AttackDamageRate) || AttackDamageRate is < 0 or > 100 ||

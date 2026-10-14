@@ -1021,3 +1021,23 @@ footer {
 .metric > div:last-child {
   min-width: 0;
 }
+
+.world-view .world-settings {
+  max-height: 480px;
+  overflow: auto;
+}
+.world-view .facts dd {
+  overflow-wrap: anywhere;
+}
+.world-view .tabs a {
+  padding: 14px 8px;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+  color: var(--muted);
+  font-weight: 600;
+  text-decoration: none;
+}
+.world-view .tabs a.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}

@@ -4,7 +4,7 @@ export const documents = [
     slug: "features",
     title: "Features",
     category: "Features",
-    date: "2026-10-06",
+    date: "2026-10-14",
     summary:
       "Explore instance management, configuration drafts, backups, recovery and access control.",
     sections: [
@@ -50,13 +50,22 @@ export const documents = [
           "The panel has local Docker administration privileges and accepts only explicitly allowlisted private-network addresses. Public UDP forwarding is outside its management scope.",
         ],
       ],
+      [
+        "Share a world with friends: independent visitor sessions",
+        [
+          "Friends playing together can keep their own copy of the world backup. Share the world read-only link so they can sign in with the world ID and applied game password, without needing the host online or an administrator account.",
+          "Visitors can read basic information, search game settings, compare observed current values with defaults, read redacted logs and download existing offline snapshots for that world whenever needed. Downloading does not create a backup or stop the running game. Snapshot timestamps indicate the saved progress, not the download time.",
+          "Visitor sessions are separate from administrator sessions and cannot change settings, start or stop instances, create backups or restore them. Sessions expire after 30 minutes and require a new login. Applied game password or world identity changes invalidate previous sessions. Empty game passwords do not enable visitor access.",
+          "The plain ZIP contains world and player saves, excluding administrative configuration and passwords. It is separate from encrypted administrative backup exports; keep downloaded files safe. Friends must be able to reach the panel and their source IP must be allowlisted. Game connectivity alone does not grant panel connectivity.",
+        ],
+      ],
     ],
   },
   {
     slug: "guide",
     title: "User guide",
     category: "Guide",
-    date: "2026-10-06",
+    date: "2026-10-14",
     summary:
       "Install the panel, set up access, create a world, change settings and manage backups.",
     sections: [
@@ -113,6 +122,17 @@ export const documents = [
         [
           "For a Windows upgrade, choose Upgrade program only (仅升级程序) to preserve configuration, accounts and instance data. The installer swaps the complete program directory to avoid leaving obsolete files behind.",
           "Actions in the instance toolbar and More (更多) menu require confirmation. Before upgrading, force-stopping or quarantining files, verify the target instance and its backups. Check task results after completion.",
+        ],
+      ],
+      [
+        "8. Invite friends to view the world and download backups",
+        [
+          "Host: confirm that the instance has a verified world ID and an applied, nonempty game password. Sign in as administrator, select Read-only view (只读查看) in the instance list or Read-only share page (只读分享页) in instance details, and copy the world link. Share a panel address reachable by your friends, rather than a loopback address that works only on your own device.",
+          "Host: share the link, world ID and game password with your friends; no administrator account is needed. Their source IP must remain allowlisted and the panel must be reachable. This feature does not configure public port forwarding. Arrange scheduled or offline backups in the management panel beforehand; visitors can only download existing snapshots.",
+          "Friend: open the link, check the world ID, enter the currently applied game password and select View read-only details (查看只读详情). The link usually pre-fills the world ID; alternatively, enter it through the dashboard's World read-only details (世界只读详情) entry. An administrator session does not replace game password verification.",
+          "Friend: select World backups (世界备份), choose a snapshot by creation time, then select Download world save ZIP (下载世界存档 ZIP) and save it to your device. The plain ZIP contains the matching world and player saves, without administrator configuration or passwords. Store it safely and remember that a snapshot is not a live save.",
+          "Friend: search settings by Chinese label or field name in Game settings (游戏设置), compare current and default values, and read recent redacted records in Recent logs (最近日志). Enter the game password again after session expiry, and select Exit read-only access (退出只读访问) when finished.",
+          "If access fails, ask the host to check the panel address, source IP allowlist, world ID and applied game password; saving a password draft alone does not apply it. If no backup is available, ask the host to arrange one. Restoration must be performed by an administrator through the recovery workflow; the visitor page cannot restore saves.",
         ],
       ],
     ],

@@ -7,7 +7,13 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "choices": {
+      "None": "未指定",
+      "Easy": "简单",
+      "Normal": "普通",
+      "Hard": "困难"
+    }
   },
   {
     "key": "RandomizerType",
@@ -17,7 +23,12 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "choices": {
+      "None": "关闭",
+      "Region": "按区域随机",
+      "All": "全部随机"
+    }
   },
   {
     "key": "RandomizerSeed",
@@ -27,7 +38,8 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "maxLength": 4096
   },
   {
     "key": "bIsRandomizerPalLevelRandom",
@@ -47,7 +59,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "NightTimeSpeedRate",
@@ -57,7 +71,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "ExpRate",
@@ -67,7 +83,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "PalCaptureRate",
@@ -77,7 +95,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "PalSpawnNumRate",
@@ -87,7 +107,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "PalDamageRateAttack",
@@ -97,7 +119,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "PalDamageRateDefense",
@@ -107,7 +131,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "PlayerDamageRateAttack",
@@ -117,7 +143,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "PlayerDamageRateDefense",
@@ -127,7 +155,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "PlayerStomachDecreaceRate",
@@ -137,7 +167,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "PlayerStaminaDecreaceRate",
@@ -147,7 +179,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "PlayerAutoHPRegeneRate",
@@ -157,7 +191,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "PlayerAutoHpRegeneRateInSleep",
@@ -167,7 +203,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "PalStomachDecreaceRate",
@@ -177,7 +215,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "PalStaminaDecreaceRate",
@@ -187,7 +227,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "PalAutoHPRegeneRate",
@@ -197,7 +239,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "PalAutoHpRegeneRateInSleep",
@@ -207,7 +251,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "BuildObjectHpRate",
@@ -217,7 +263,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "BuildObjectDamageRate",
@@ -227,7 +275,9 @@
     "ruleKey": "attackDamageRate",
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 100
   },
   {
     "key": "BuildObjectDeteriorationDamageRate",
@@ -237,7 +287,9 @@
     "ruleKey": "deteriorationRate",
     "editable": true,
     "secret": false,
-    "integer": true
+    "integer": true,
+    "min": 0,
+    "max": 100
   },
   {
     "key": "CollectionDropRate",
@@ -247,7 +299,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "CollectionObjectHpRate",
@@ -257,7 +311,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "CollectionObjectRespawnSpeedRate",
@@ -267,7 +323,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "EnemyDropItemRate",
@@ -277,7 +335,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "DeathPenalty",
@@ -287,7 +347,13 @@
     "ruleKey": "deathPenalty",
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "choices": {
+      "None": "不掉落",
+      "Item": "物品",
+      "ItemAndEquipment": "物品与装备",
+      "All": "全部"
+    }
   },
   {
     "key": "bEnablePlayerToPlayerDamage",
@@ -357,7 +423,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": true
+    "integer": true,
+    "min": 0,
+    "max": 2147483647
   },
   {
     "key": "DropItemMaxNum_UNKO",
@@ -367,7 +435,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": true
+    "integer": true,
+    "min": 0,
+    "max": 2147483647
   },
   {
     "key": "BaseCampMaxNum",
@@ -377,7 +447,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": true
+    "integer": true,
+    "min": 0,
+    "max": 2147483647
   },
   {
     "key": "BaseCampWorkerMaxNum",
@@ -387,7 +459,61 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": true
+    "integer": true,
+    "min": 1,
+    "max": 50,
+    "choices": {
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5",
+      "6": "6",
+      "7": "7",
+      "8": "8",
+      "9": "9",
+      "10": "10",
+      "11": "11",
+      "12": "12",
+      "13": "13",
+      "14": "14",
+      "15": "15",
+      "16": "16",
+      "17": "17",
+      "18": "18",
+      "19": "19",
+      "20": "20",
+      "21": "21",
+      "22": "22",
+      "23": "23",
+      "24": "24",
+      "25": "25",
+      "26": "26",
+      "27": "27",
+      "28": "28",
+      "29": "29",
+      "30": "30",
+      "31": "31",
+      "32": "32",
+      "33": "33",
+      "34": "34",
+      "35": "35",
+      "36": "36",
+      "37": "37",
+      "38": "38",
+      "39": "39",
+      "40": "40",
+      "41": "41",
+      "42": "42",
+      "43": "43",
+      "44": "44",
+      "45": "45",
+      "46": "46",
+      "47": "47",
+      "48": "48",
+      "49": "49",
+      "50": "50"
+    }
   },
   {
     "key": "DropItemAliveMaxHours",
@@ -397,7 +523,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "bAutoResetGuildNoOnlinePlayers",
@@ -417,7 +545,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "GuildPlayerMaxNum",
@@ -427,7 +557,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": true
+    "integer": true,
+    "min": 0,
+    "max": 2147483647
   },
   {
     "key": "BaseCampMaxNumInGuild",
@@ -437,7 +569,21 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": true
+    "integer": true,
+    "min": 1,
+    "max": 10,
+    "choices": {
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "4": "4",
+      "5": "5",
+      "6": "6",
+      "7": "7",
+      "8": "8",
+      "9": "9",
+      "10": "10"
+    }
   },
   {
     "key": "PalEggDefaultHatchingTime",
@@ -447,7 +593,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "WorkSpeedRate",
@@ -457,7 +605,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "AutoSaveSpan",
@@ -467,7 +617,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "bIsMultiplay",
@@ -607,7 +759,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "CoopPlayerMaxNum",
@@ -617,7 +771,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": true
+    "integer": true,
+    "min": 0,
+    "max": 2147483647
   },
   {
     "key": "ServerPlayerMaxNum",
@@ -627,7 +783,9 @@
     "ruleKey": "maxPlayers",
     "editable": true,
     "secret": false,
-    "integer": true
+    "integer": true,
+    "min": 1,
+    "max": 32
   },
   {
     "key": "ServerName",
@@ -637,7 +795,8 @@
     "ruleKey": "name",
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "maxLength": 64
   },
   {
     "key": "ServerDescription",
@@ -647,7 +806,8 @@
     "ruleKey": "description",
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "maxLength": 256
   },
   {
     "key": "AdminPassword",
@@ -657,7 +817,8 @@
     "ruleKey": null,
     "editable": false,
     "secret": true,
-    "integer": false
+    "integer": false,
+    "maxLength": 4096
   },
   {
     "key": "ServerPassword",
@@ -667,7 +828,8 @@
     "ruleKey": null,
     "editable": false,
     "secret": true,
-    "integer": false
+    "integer": false,
+    "maxLength": 4096
   },
   {
     "key": "PublicPort",
@@ -677,7 +839,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": true
+    "integer": true,
+    "min": 1,
+    "max": 65535
   },
   {
     "key": "PublicIP",
@@ -687,7 +851,8 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "maxLength": 4096
   },
   {
     "key": "RCONEnabled",
@@ -707,7 +872,9 @@
     "ruleKey": null,
     "editable": false,
     "secret": false,
-    "integer": true
+    "integer": true,
+    "min": 1,
+    "max": 65535
   },
   {
     "key": "Region",
@@ -717,7 +884,8 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "maxLength": 4096
   },
   {
     "key": "bUseAuth",
@@ -737,7 +905,8 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "maxLength": 4096
   },
   {
     "key": "RESTAPIEnabled",
@@ -757,7 +926,9 @@
     "ruleKey": null,
     "editable": false,
     "secret": false,
-    "integer": true
+    "integer": true,
+    "min": 1,
+    "max": 65535
   },
   {
     "key": "bShowPlayerList",
@@ -777,7 +948,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": true
+    "integer": true,
+    "min": 0,
+    "max": 2147483647
   },
   {
     "key": "CrossplayPlatforms",
@@ -787,7 +960,13 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "choices": {
+      "Steam": "Steam",
+      "Xbox": "Xbox",
+      "PS5": "PS5",
+      "Mac": "Mac"
+    }
   },
   {
     "key": "bIsUseBackupSaveData",
@@ -807,7 +986,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": true
+    "integer": true,
+    "min": 0,
+    "max": 2147483647
   },
   {
     "key": "EnablePredatorBossPal",
@@ -827,7 +1008,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": true
+    "integer": true,
+    "min": 0,
+    "max": 2147483647
   },
   {
     "key": "ServerReplicatePawnCullDistance",
@@ -837,7 +1020,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 5000,
+    "max": 15000
   },
   {
     "key": "bAllowGlobalPalboxExport",
@@ -867,7 +1052,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "ItemContainerForceMarkDirtyInterval",
@@ -877,7 +1064,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "ItemCorruptionMultiplier",
@@ -887,7 +1076,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "PhysicsActiveDropItemMaxNum",
@@ -897,7 +1088,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": true
+    "integer": true,
+    "min": -1,
+    "max": 2147483647
   },
   {
     "key": "bAllowClientMod",
@@ -917,7 +1110,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "LogFormatType",
@@ -927,7 +1122,11 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "choices": {
+      "Text": "文本",
+      "Json": "JSON"
+    }
   },
   {
     "key": "bIsShowJoinLeftMessage",
@@ -947,7 +1146,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "DenyTechnologyList",
@@ -967,7 +1168,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": true
+    "integer": true,
+    "min": 0,
+    "max": 2147483647
   },
   {
     "key": "AutoTransferMasterCheckIntervalSeconds",
@@ -977,7 +1180,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "AutoTransferMasterThresholdDays",
@@ -987,7 +1192,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": true
+    "integer": true,
+    "min": 0,
+    "max": 2147483647
   },
   {
     "key": "MaxGuildsPerFrame",
@@ -997,7 +1204,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": true
+    "integer": true,
+    "min": 0,
+    "max": 2147483647
   },
   {
     "key": "BlockRespawnTime",
@@ -1007,7 +1216,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "RespawnPenaltyDurationThreshold",
@@ -1017,7 +1228,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "RespawnPenaltyTimeScale",
@@ -1027,7 +1240,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "bDisplayPvPItemNumOnWorldMap_BaseCamp",
@@ -1057,7 +1272,8 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "maxLength": 4096
   },
   {
     "key": "AdditionalDropItemNumWhenPlayerKillingInPvPMode",
@@ -1067,7 +1283,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": true
+    "integer": true,
+    "min": 0,
+    "max": 2147483647
   },
   {
     "key": "bAdditionalDropItemWhenPlayerKillingInPvPMode",
@@ -1097,7 +1315,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "VoiceChatZeroVolumeDistance",
@@ -1107,7 +1327,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0,
+    "max": 1000000000000.0
   },
   {
     "key": "bAllowEnhanceStat_Health",
@@ -1177,7 +1399,9 @@
     "ruleKey": null,
     "editable": true,
     "secret": false,
-    "integer": true
+    "integer": true,
+    "min": 0,
+    "max": 2147483647
   },
   {
     "key": "FishingDifficultyRate",
@@ -1186,7 +1410,9 @@
     "defaultValue": null,
     "editable": true,
     "secret": false,
-    "integer": false
+    "integer": false,
+    "min": 0.1,
+    "max": 1
   },
   {
     "key": "bAllowEnemyCampSpawnNearBaseCamp",

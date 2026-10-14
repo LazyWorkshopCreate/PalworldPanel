@@ -28,6 +28,8 @@ public static partial class LogRedactor
 
     public static string Clean(string value, params string[] knownSecrets)
     {
+        // Real game/container logs include ANSI colours; remove the whole sequence before stripping controls.
+        value = AnsiEscape().Replace(value, "");
         foreach (var secret in knownSecrets.Where(s => !string.IsNullOrEmpty(s)).SelectMany(secret => new[]
             { secret, EnvironmentFile.IniText(secret), Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("admin:" + secret)) }).Distinct(StringComparer.Ordinal).OrderByDescending(s => s.Length))
             value = value.Replace(secret, "[redacted]", StringComparison.Ordinal);
@@ -41,6 +43,8 @@ public static partial class LogRedactor
     }
     [GeneratedRegex("^.*(?:PASSWORD|authorization|token|secret|userid|playeruid|playerip|playername|steamid|epicid|player.*(?:joined|connected)).*$", RegexOptions.IgnoreCase | RegexOptions.Multiline)]
     private static partial Regex SensitiveLine();
+    [GeneratedRegex("\u001B\\[[0-?]*[ -/]*[@-~]")]
+    private static partial Regex AnsiEscape();
     [GeneratedRegex("(https?://)[^/\\s]+@", RegexOptions.IgnoreCase)] private static partial Regex UserInfo();
     [GeneratedRegex("\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b")] private static partial Regex Ipv4();
     [GeneratedRegex("\\b[0-9]{16,20}\\b")] private static partial Regex PlatformId();

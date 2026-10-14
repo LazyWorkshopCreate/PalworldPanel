@@ -6,7 +6,8 @@ using PalworldPanel.Server.Infrastructure;
 namespace PalworldPanel.Server.Domain;
 
 public sealed record GameSettingDefinition(string Key, string Label, string Type, string? DefaultValue,
-    string? RuleKey = null, bool Editable = true, bool Secret = false, bool Integer = false);
+    string? RuleKey = null, bool Editable = true, bool Secret = false, bool Integer = false,
+    double? Min = null, double? Max = null, int? MaxLength = null, Dictionary<string, string>? Choices = null);
 
 public static class GameSettingCatalog
 {
@@ -16,12 +17,6 @@ public static class GameSettingCatalog
         using var stream = typeof(GameSettingCatalog).Assembly.GetManifestResourceStream("game-settings.json")!;
         return JsonSerializer.Deserialize<GameSettingDefinition[]>(stream, DurableFile.Json)!;
     }
-    public static readonly Dictionary<string, string[]> Choices = new(StringComparer.Ordinal)
-    {
-        ["Difficulty"] = ["None", "Easy", "Normal", "Hard"],
-        ["RandomizerType"] = ["None", "Region", "All"],
-        ["LogFormatType"] = ["Text", "Json"]
-    };
     public static void Validate(Dictionary<string, string>? values)
     {
         if (values is null) return;
@@ -36,23 +31,19 @@ public static class GameSettingCatalog
     }
     public static string Encode(GameSettingDefinition field, string value)
     {
-        if (value.Any(char.IsControl) || value.Length > 4096) throw Invalid();
+        if (value.Any(char.IsControl) || value.Length > (field.MaxLength ?? 4096)) throw Invalid();
         if (field.Type == "boolean")
             return bool.TryParse(value, out var flag) ? flag ? "True" : "False" : throw Invalid();
         if (field.Type == "number")
         {
             if (!double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) ||
-                !double.IsFinite(number) || number < (field.Key == "PhysicsActiveDropItemMaxNum" ? -1 : 0) || number > 1e12)
+                !double.IsFinite(number) || number < (field.Min ?? 0) || number > (field.Max ?? 1e12))
                 throw Invalid();
-            if (field.Key is "BaseCampMaxNumInGuild" && (number < 1 || number > 10) ||
-                field.Key is "BaseCampWorkerMaxNum" && (number < 1 || number > 50) ||
-                field.Key is "ServerReplicatePawnCullDistance" && (number < 5000 || number > 15000) ||
-                field.Key is "FishingDifficultyRate" && (number < 0.1 || number > 1)) throw Invalid();
             if (field.Integer && (number != Math.Truncate(number) || number > int.MaxValue)) throw Invalid();
             return number.ToString("G17", CultureInfo.InvariantCulture);
         }
         if (field.Type == "enum")
-            return Choices.TryGetValue(field.Key, out var choices) && choices.Contains(value, StringComparer.Ordinal) ? value : throw Invalid();
+            return field.Choices?.ContainsKey(value) == true ? value : throw Invalid();
         if (field.Type == "list")
         {
             var contents = value.Trim().Trim('(', ')');
@@ -60,7 +51,7 @@ public static class GameSettingCatalog
             if (string.IsNullOrWhiteSpace(contents)) return field.Key == "DenyTechnologyList" ? "" : "()";
             var items = contents.Split(',').Select(v => v.Trim().Trim('"')).ToArray();
             if (items.Any(v => !Regex.IsMatch(v, "^[A-Za-z0-9_-]{1,128}$")) || items.Length > 256) throw Invalid();
-            if (field.Key == "CrossplayPlatforms" && items.Any(v => v is not ("Steam" or "Xbox" or "PS5" or "Mac"))) throw Invalid();
+            if (field.Choices is not null && items.Any(v => !field.Choices.ContainsKey(v))) throw Invalid();
             return "(" + string.Join(',', items.Select(v => field.Key == "CrossplayPlatforms" ? v : Quote(v))) + ")";
         }
         if (field.Key == "BanListURL" && value.Length > 0 && (!Uri.TryCreate(value, UriKind.Absolute, out var uri) ||

@@ -8,6 +8,33 @@ namespace PalworldPanel.UnitTests;
 
 public sealed class GameSettingsTests
 {
+    [Theory]
+    [InlineData("BaseCampMaxNumInGuild", "0")]
+    [InlineData("BaseCampMaxNumInGuild", "11")]
+    [InlineData("BaseCampMaxNumInGuild", "1.5")]
+    [InlineData("BaseCampWorkerMaxNum", "51")]
+    [InlineData("ServerReplicatePawnCullDistance", "4999")]
+    [InlineData("FishingDifficultyRate", "1.1")]
+    [InlineData("PublicPort", "65536")]
+    [InlineData("ExpRate", "Infinity")]
+    [InlineData("Difficulty", "Unknown")]
+    [InlineData("CrossplayPlatforms", "(Steam,Other)")]
+    public void SharedMetadataRejectsInvalidValuesEvenWhenClientIsBypassed(string key, string value) =>
+        Assert.Throws<PanelException>(() => GameSettingCatalog.Validate(new() { [key] = value }));
+
+    [Fact]
+    public void EveryPublishedChoiceAndNumericBoundaryCanBeEncoded()
+    {
+        foreach (var field in GameSettingCatalog.Definitions)
+        {
+            if (field.Choices is not null)
+                foreach (var value in field.Choices.Keys)
+                    Assert.NotEmpty(GameSettingCatalog.Encode(field, value));
+            if (field.Min is not null) Assert.NotEmpty(GameSettingCatalog.Encode(field, field.Min.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            if (field.Max is not null) Assert.NotEmpty(GameSettingCatalog.Encode(field, field.Max.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        }
+        Assert.Throws<PanelException>(() => new GameRules("   ").Validate());
+    }
     [Fact]
     public void AdvancedFileWritesAllTypesPreservesUnknownsAndNeverReturnsPasswords()
     {

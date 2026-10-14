@@ -33,12 +33,15 @@ public static class KnownCompose
             if (volumes[0]?["source"]?.GetValue<string>() != expectedSource) throw Unsupported();
             var ports = service["ports"]?.AsArray()?.Select(p => p?.GetValue<string>()).ToArray();
             if (instance.Owned && instance.QueryPort <= 0) throw Unsupported();
-            var gameAddress = options.DesktopValidation ? "127.0.0.1" : options.BindIp;
+            var gameAddress = options.DesktopValidation ? "127.0.0.1" : "0.0.0.0";
             var expectedPorts = new List<string> { $"{gameAddress}:{instance.GamePort}:8211/udp", $"127.0.0.1:{instance.RestPort}:8212/tcp" };
-            if (instance.QueryPort > 0) expectedPorts.Add($"{gameAddress}:{instance.QueryPort}:27015/udp");
+            var queryAddress = options.DesktopValidation ? "127.0.0.1" : options.BindIp;
+            if (instance.QueryPort > 0) expectedPorts.Add($"{queryAddress}:{instance.QueryPort}:27015/udp");
             if (ports is null) throw Unsupported();
-            // Preserve an explicitly adopted server's existing UDP publication, including local forwarding.
-            var normalizedPorts = ports.Select(p => !instance.Owned && p == $"{instance.GamePort}:8211/udp"
+            // Accept the previous LAN-only template without rewriting it during discovery or adoption.
+            // Adopted servers may also retain their existing implicit wildcard publication.
+            var normalizedPorts = ports.Select(p => p == $"{options.BindIp}:{instance.GamePort}:8211/udp" && !options.DesktopValidation ||
+                !instance.Owned && p == $"{instance.GamePort}:8211/udp"
                 ? $"{gameAddress}:{instance.GamePort}:8211/udp" : p);
             if (!normalizedPorts.Order().SequenceEqual(expectedPorts.Order())) throw Unsupported();
             return document!;

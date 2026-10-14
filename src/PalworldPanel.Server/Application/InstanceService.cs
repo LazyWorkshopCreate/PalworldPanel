@@ -190,7 +190,7 @@ public sealed class InstanceService(PanelOptions options, SqliteStore store, Sec
             ["image"] = instance.Image, ["restart"] = "unless-stopped", ["stop_grace_period"] = "120s",
             ["cpus"] = instance.Desired.Cpu, ["mem_limit"] = instance.Desired.MemoryMiB + "m",
             ["env_file"] = new[] { new { path = "settings.env", format = "raw" }, new { path = "secrets.env", format = "raw" } },
-            ["ports"] = new[] { $"{(options.DesktopValidation ? "127.0.0.1" : options.BindIp)}:{instance.GamePort}:8211/udp", $"127.0.0.1:{instance.RestPort}:8212/tcp", $"{(options.DesktopValidation ? "127.0.0.1" : options.BindIp)}:{instance.QueryPort}:27015/udp" },
+            ["ports"] = new[] { $"{(options.DesktopValidation ? "127.0.0.1" : "0.0.0.0")}:{instance.GamePort}:8211/udp", $"127.0.0.1:{instance.RestPort}:8212/tcp", $"{(options.DesktopValidation ? "127.0.0.1" : options.BindIp)}:{instance.QueryPort}:27015/udp" },
             ["volumes"] = new[] { new { type = "bind", source = HostPath(Path.Combine(instance.Root, "data")), target = "/palworld" } },
             ["labels"] = new Dictionary<string, string> { ["com.palworldpanel.instance"] = instance.Id }
         };

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ParameterSettings } from './ParameterSettings';
 
@@ -16,6 +16,60 @@ const value = {
   memoryMiB: 16384,
 };
 describe('参数列表编辑', () => {
+  it('有界据点选项使用下拉，非法旧值必须重新选择才可保存', async () => {
+    const onChange = vi.fn();
+    render(
+      <ParameterSettings
+        value={{ ...value, additional: { BaseCampMaxNumInGuild: '11' } }}
+        current={value}
+        onChange={onChange}
+        disabled={false}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: '修改每公会据点上限' }));
+    expect(screen.getByRole('combobox', { name: '每公会据点上限' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '保存到草稿' })).toBeDisabled();
+    await userEvent.selectOptions(screen.getByLabelText('每公会据点上限'), '9');
+    await userEvent.click(screen.getByRole('button', { name: '保存到草稿' }));
+    expect(onChange).toHaveBeenCalledWith({ ...value, additional: { BaseCampMaxNumInGuild: '9' } });
+  });
+  it('跨平台选项支持多选并保留列表格式', async () => {
+    const onChange = vi.fn();
+    render(
+      <ParameterSettings
+        value={{ ...value, additional: { CrossplayPlatforms: '(Steam)' } }}
+        current={value}
+        onChange={onChange}
+        disabled={false}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: '修改允许跨平台列表' }));
+    const select = screen.getByRole('listbox', { name: '允许跨平台列表' });
+    await userEvent.selectOptions(select, ['Xbox', 'PS5']);
+    await userEvent.click(screen.getByRole('button', { name: '保存到草稿' }));
+    expect(onChange).toHaveBeenCalledWith({
+      ...value,
+      additional: { CrossplayPlatforms: '(Steam,Xbox,PS5)' },
+    });
+  });
+  it('整数与范围无效时明确提示，并阻止绕过按钮的表单提交', async () => {
+    const onChange = vi.fn();
+    render(
+      <ParameterSettings value={value} current={value} onChange={onChange} disabled={false} />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: '修改玩家上限' }));
+    const input = screen.getByLabelText('玩家上限');
+    expect(input).toHaveAttribute('step', '1');
+    await userEvent.clear(input);
+    await userEvent.type(input, '8.5');
+    expect(screen.getByRole('alert')).toHaveTextContent('必须是整数');
+    fireEvent.submit(screen.getByRole('dialog').querySelector('form')!);
+    expect(onChange).not.toHaveBeenCalled();
+    await userEvent.clear(input);
+    await userEvent.type(input, '33');
+    expect(screen.getByRole('alert')).toHaveTextContent('不能大于 32');
+    expect(screen.getByRole('button', { name: '保存到草稿' })).toBeDisabled();
+  });
   it('只高亮未应用的草稿值，已应用后清除高亮，实际观测差异不误报', () => {
     const draft = { ...value, maxPlayers: 12, additional: { ExpRate: '2.0' } };
     const baseline = { ...value, additional: { ExpRate: '2' } };
@@ -106,5 +160,45 @@ describe('参数列表编辑', () => {
       within(screen.getByRole('row', { name: /ServerPlayerMaxNum/ })).getByText('未知'),
     ).toBeInTheDocument();
     for (const button of screen.getAllByRole('button')) expect(button).toBeDisabled();
+  });
+  it('等待保存完成期间禁止重复提交和关闭，成功后才关闭弹窗', async () => {
+    let finish!: () => void;
+    const onChange = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    render(
+      <ParameterSettings value={value} current={value} onChange={onChange} disabled={false} />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: '修改玩家上限' }));
+    const form = screen.getByRole('dialog').querySelector('form')!;
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: '保存中…' })).toBeDisabled();
+    await userEvent.keyboard('{Escape}');
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    await act(async () => finish());
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+  it('保存失败保留输入和弹窗，可修改后重试', async () => {
+    const onChange = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('配置已经变化，请刷新预览。'))
+      .mockResolvedValue(undefined);
+    render(
+      <ParameterSettings value={value} current={value} onChange={onChange} disabled={false} />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: '修改玩家上限' }));
+    await userEvent.clear(screen.getByLabelText('玩家上限'));
+    await userEvent.type(screen.getByLabelText('玩家上限'), '12');
+    await userEvent.click(screen.getByRole('button', { name: '保存到草稿' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('配置已经变化');
+    expect(screen.getByLabelText('玩家上限')).toHaveValue(12);
+    await userEvent.click(screen.getByRole('button', { name: '保存到草稿' }));
+    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

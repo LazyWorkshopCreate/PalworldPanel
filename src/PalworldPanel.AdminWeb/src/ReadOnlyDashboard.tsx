@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ServerCog } from 'lucide-react';
 import { api } from './api';
+import { RouteLink } from './router';
 import { Modal } from './Modal';
 
 type Snapshot = {
@@ -88,6 +89,9 @@ export function ReadOnlyDashboard({
           <button className="nav-active" aria-current="page">
             仪表盘
           </button>
+          <RouteLink className="nav-button" href="/world-view">
+            世界只读详情
+          </RouteLink>
           {management}
         </nav>
         {!management && (

@@ -118,6 +118,8 @@ builder.Services.AddSingleton<GameUpdateService>();
 builder.Services.AddSingleton<HostMetrics>();
 builder.Services.AddSingleton<InstanceService>();
 builder.Services.AddSingleton<PublicDashboard>();
+builder.Services.AddSingleton<WorldReadOnlySecurity>();
+builder.Services.AddSingleton<WorldSaveExport>();
 builder.Services.AddSingleton<BackupService>();
 builder.Services.AddSingleton<DiscoveryService>();
 builder.Services.AddSingleton<TaskRecoveryService>();
@@ -160,7 +162,7 @@ app.Use(async (context, next) =>
     context.Response.Headers["Cache-Control"] = "no-store";
     var styleNonce = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
     context.Items["style-nonce"] = styleNonce;
-    context.Response.Headers["Content-Security-Policy"] = BrowserSecurityHeaders.ContentSecurityPolicy(styleNonce, OperatingSystem.IsWindows(), context.Connection.RemoteIpAddress);
+    context.Response.Headers["Content-Security-Policy"] = BrowserSecurityHeaders.ContentSecurityPolicy(styleNonce, OperatingSystem.IsWindows(), context.Connection.RemoteIpAddress, options.DesktopValidation);
     try { await next(context); }
     catch (PanelException error)
     { await Results.Problem(statusCode: error.Status, title: error.Message, extensions: new Dictionary<string, object?> { ["code"] = error.Code }).ExecuteAsync(context); }
@@ -178,7 +180,13 @@ app.Use(async (context, next) =>
         var origin = context.Request.Headers.Origin.ToString();
         if (origin != context.Request.Scheme + "://" + context.Request.Host)
         { context.Response.StatusCode = 403; return; }
-        if ((context.Request.Path != "/api/v1/session" && context.Request.Path != "/api/v1/setup") || context.Request.Method != "POST")
+        if (context.Request.Path.StartsWithSegments(WorldReadOnlySecurity.Path))
+        {
+            if (context.Request.Path != WorldReadOnlySecurity.Path + "/session" || context.Request.Method is not ("POST" or "DELETE"))
+            { context.Response.StatusCode = 405; return; }
+            context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>()!.MaxRequestBodySize = 4096;
+        }
+        else if ((context.Request.Path != "/api/v1/session" && context.Request.Path != "/api/v1/setup") || context.Request.Method != "POST")
         {
             if (context.User.Identity?.IsAuthenticated != true) { context.Response.StatusCode = 401; return; }
             var expected = context.User.FindFirstValue("csrf");
@@ -219,6 +227,7 @@ app.MapGet("/api/v1/tasks", (SqliteStore store) => Results.Ok(store.Tasks().Sele
 { t.Id, t.InstanceId, t.Kind, t.State, t.Phase, t.CreatedUtc, t.SafeCode, t.RecoveryPoint, t.Message }))).RequireAuthorization();
 app.MapFallback("/api/{**path}", () => Results.Problem(statusCode: 404, title: "接口不存在。"));
 app.MapPanelEndpoints();
+app.MapWorldReadOnlyEndpoints();
 app.Use(async (context, next) =>
 {
     if (context.Request.Path == "/index.html" && context.Request.Method is "GET" or "HEAD") await RenderIndex(context);

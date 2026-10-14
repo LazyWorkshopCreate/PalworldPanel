@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Modal } from './Modal';
 import catalog from '../../PalworldPanel.Contracts/game-settings.json';
+import { listValues, validateParameter, type ParameterDefinition } from './parameterValidation';
 
 type Rules = {
   name: string;
@@ -14,7 +15,7 @@ type Rules = {
   memoryMiB: number;
   additional?: Record<string, string> | null;
 };
-type Field = {
+type Field = ParameterDefinition & {
   key: string;
   label: string;
   type: string;
@@ -34,6 +35,8 @@ const fields: Field[] = [
     defaultValue: '4',
     editable: true,
     unit: 'CPU',
+    min: 0,
+    max: 1e12,
   },
   {
     key: 'memoryMiB',
@@ -43,19 +46,16 @@ const fields: Field[] = [
     defaultValue: '16384',
     editable: true,
     unit: 'MiB',
+    min: 512,
+    max: Number.MAX_SAFE_INTEGER,
+    integer: true,
   },
 ];
-const choices: Record<string, Record<string, string>> = {
-  DeathPenalty: { None: '不掉落', Item: '物品', ItemAndEquipment: '物品与装备', All: '全部' },
-  Difficulty: { None: '未指定', Easy: '简单', Normal: '普通', Hard: '困难' },
-  RandomizerType: { None: '关闭', Region: '按区域随机', All: '全部随机' },
-  LogFormatType: { Text: '文本', Json: 'JSON' },
-};
 function format(field: Field, value: unknown): string {
   if (value === undefined || value === null) return '未知';
   if (field.type === 'boolean') return String(value).toLowerCase() === 'true' ? '开启' : '关闭';
   if (value === '') return '空';
-  if (choices[field.key]) return choices[field.key][String(value)] || String(value);
+  if (field.choices && field.type !== 'list') return field.choices[String(value)] || String(value);
   return `${field.type === 'number' ? Number(value) : value}${field.unit ? ` ${field.unit}` : ''}`;
 }
 export function ParameterSettings({
@@ -70,7 +70,7 @@ export function ParameterSettings({
   value: Rules;
   current: Partial<Rules> | null;
   applied?: Partial<Rules> | null;
-  onChange: (value: Rules) => void;
+  onChange: (value: Rules) => void | Promise<void>;
   disabled: boolean;
   search?: string;
   onSearchChange?: (search: string) => void;
@@ -82,6 +82,10 @@ export function ParameterSettings({
   );
   const [editing, setEditing] = useState<Field | null>(null);
   const [input, setInput] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const savingRef = useRef(false);
+  const validationError = editing ? validateParameter(editing, input) : '';
   const opener = useRef<HTMLElement | null>(null);
   const actual = (field: Field) =>
     field.ruleKey ? current?.[field.ruleKey] : current?.additional?.[field.key];
@@ -140,17 +144,20 @@ export function ParameterSettings({
                 <td>
                   <button
                     className="ghost"
-                    disabled={disabled || !field.editable}
+                    disabled={disabled || saving || !field.editable}
                     aria-label={`修改${field.label}`}
                     onClick={(event) => {
                       opener.current = event.currentTarget;
+                      setError('');
                       const starting = draft(field) ?? field.defaultValue ?? '';
                       setInput(
                         field.type === 'boolean'
                           ? String(starting).toLowerCase() === 'true'
                             ? 'true'
                             : 'false'
-                          : String(starting),
+                          : field.type === 'number'
+                            ? String(Number(starting))
+                            : String(starting),
                       );
                       setEditing(field);
                     }}
@@ -167,27 +174,45 @@ export function ParameterSettings({
       <Modal
         open={editing !== null}
         onOpenChange={(open) => {
-          if (!open) setEditing(null);
+          if (!open && !savingRef.current) setEditing(null);
         }}
         title={`修改${editing?.label || '参数'}`}
-        description="保存到本页草稿；取消或按 Esc 不保留此次编辑。"
+        description="保存后草稿会保留，需另行应用才会影响游戏。取消或按 Esc 不保留此次编辑。"
         returnFocus={opener}
       >
         {editing && (
           <form
-            onSubmit={(event) => {
+            noValidate
+            onSubmit={async (event) => {
               event.preventDefault();
-              if (editing.ruleKey) {
-                const next =
-                  editing.type === 'boolean'
-                    ? input === 'true'
-                    : editing.type === 'number'
-                      ? Number(input)
-                      : input;
-                onChange({ ...value, [editing.ruleKey]: next });
-              } else
-                onChange({ ...value, additional: { ...value.additional, [editing.key]: input } });
-              setEditing(null);
+              if (disabled || savingRef.current) return;
+              if (validationError) {
+                setError(validationError);
+                return;
+              }
+              savingRef.current = true;
+              setSaving(true);
+              setError('');
+              const next = editing.ruleKey
+                ? {
+                    ...value,
+                    [editing.ruleKey]:
+                      editing.type === 'boolean'
+                        ? input === 'true'
+                        : editing.type === 'number'
+                          ? Number(input)
+                          : input,
+                  }
+                : { ...value, additional: { ...value.additional, [editing.key]: input } };
+              try {
+                await onChange(next);
+                setEditing(null);
+              } catch (failure) {
+                setError(failure instanceof Error ? failure.message : '保存失败，请重试。');
+              } finally {
+                savingRef.current = false;
+                setSaving(false);
+              }
             }}
           >
             <code className="parameter-field">{editing.key}</code>
@@ -198,16 +223,44 @@ export function ParameterSettings({
             </p>
             <label>
               {editing.label}
-              {choices[editing.key] ? (
-                <select value={input} onChange={(event) => setInput(event.target.value)}>
-                  {Object.entries(choices[editing.key]).map(([key, label]) => (
+              {editing.choices ? (
+                <select
+                  disabled={disabled || saving}
+                  multiple={editing.type === 'list'}
+                  value={editing.type === 'list' ? listValues(input) : input}
+                  onChange={(event) => {
+                    setError('');
+                    setInput(
+                      editing.type === 'list'
+                        ? '(' +
+                            Array.from(event.target.selectedOptions, (option) => option.value).join(
+                              ',',
+                            ) +
+                            ')'
+                        : event.target.value,
+                    );
+                  }}
+                >
+                  {editing.type !== 'list' && !Object.hasOwn(editing.choices, input) && (
+                    <option value={input} disabled>
+                      当前值无效，请重新选择
+                    </option>
+                  )}
+                  {Object.entries(editing.choices).map(([key, label]) => (
                     <option key={key} value={key}>
                       {label}
                     </option>
                   ))}
                 </select>
               ) : editing.type === 'boolean' ? (
-                <select value={input} onChange={(event) => setInput(event.target.value)}>
+                <select
+                  disabled={disabled || saving}
+                  value={input}
+                  onChange={(event) => {
+                    setInput(event.target.value);
+                    setError('');
+                  }}
+                >
                   <option value="false">关闭</option>
                   <option value="true">开启</option>
                 </select>
@@ -215,39 +268,43 @@ export function ParameterSettings({
                 <input
                   type={editing.type === 'number' ? 'number' : 'text'}
                   value={input}
-                  onChange={(event) => setInput(event.target.value)}
-                  min={
-                    editing.key === 'PhysicsActiveDropItemMaxNum'
-                      ? -1
-                      : editing.key === 'cpu'
-                        ? 0.5
-                        : editing.key === 'memoryMiB'
-                          ? 512
-                          : editing.key === 'ServerPlayerMaxNum'
-                            ? 1
-                            : 0
-                  }
-                  max={editing.key === 'ServerPlayerMaxNum' ? 32 : undefined}
-                  step="any"
-                  maxLength={
-                    editing.key === 'ServerName'
-                      ? 64
-                      : editing.key === 'ServerDescription'
-                        ? 256
-                        : 4096
-                  }
+                  disabled={disabled || saving}
+                  onChange={(event) => {
+                    setInput(event.target.value);
+                    setError('');
+                  }}
+                  min={editing.min}
+                  max={editing.max}
+                  step={editing.integer ? 1 : 'any'}
+                  maxLength={editing.maxLength ?? 4096}
                   required={editing.type === 'number' || editing.key === 'ServerName'}
                 />
               )}
             </label>
+            {editing.type === 'number' && (
+              <p className="muted">
+                取值范围：{editing.min}–{editing.max}
+                {editing.integer ? '，仅限整数' : ''}
+              </p>
+            )}
+            {editing.type === 'list' && editing.choices && (
+              <p className="muted">可选择多个平台（按住 Ctrl 或 Command），也可取消全部选择。</p>
+            )}
+            {(validationError || error) && <p role="alert">{validationError || error}</p>}
             <div className="actions">
-              <button type="button" className="ghost" onClick={() => setEditing(null)}>
+              <button
+                type="button"
+                className="ghost"
+                disabled={saving}
+                onClick={() => setEditing(null)}
+              >
                 取消
               </button>
               {editing.key !== 'ServerName' && editing.defaultValue !== null && (
                 <button
                   type="button"
                   className="ghost"
+                  disabled={disabled || saving}
                   onClick={() =>
                     setInput(
                       editing.type === 'boolean'
@@ -259,8 +316,8 @@ export function ParameterSettings({
                   使用默认值
                 </button>
               )}
-              <button className="primary" disabled={disabled}>
-                保存到草稿
+              <button className="primary" disabled={disabled || saving || !!validationError}>
+                {saving ? '保存中…' : '保存到草稿'}
               </button>
             </div>
           </form>

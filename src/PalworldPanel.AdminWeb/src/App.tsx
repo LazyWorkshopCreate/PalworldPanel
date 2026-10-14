@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { LoginLayout } from './LoginLayout';
 import { Modal } from './Modal';
 import { UpgradeDialog } from './UpgradeDialog';
 import { ActionConfirmation, type ActionRequest } from './ActionConfirmation';
@@ -7,6 +8,7 @@ import { PasswordStatusTable, type InstancePasswordStates } from './PasswordStat
 import { MoreActions } from './MoreActions';
 import { actionState, type ActionKind } from './instanceActionPolicy';
 import { ParameterSettings } from './ParameterSettings';
+import { WorldReadOnlyPage } from './WorldReadOnlyPage';
 import { ReadOnlyDashboard } from './ReadOnlyDashboard';
 import { InstanceInitialization } from './InstanceInitialization';
 import { BackupPolicyForm } from './BackupPolicyForm';
@@ -307,68 +309,61 @@ export function Login({
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const Container = embedded ? 'section' : 'main';
   return (
-    <Container className={embedded ? 'login-panel' : 'login-page'}>
-      <div className="login-card">
-        <div className="brand">
-          <ServerCog aria-hidden="true" />
-          <span>PalworldPanel</span>
-        </div>
-        <h1>管理你的独立世界</h1>
-        <p className="muted">仅允许白名单内网地址访问。登录后管理实例、任务和恢复点。</p>
-        <form
-          onSubmit={async (event) => {
-            event.preventDefault();
-            setBusy(true);
-            setError('');
-            try {
-              await api('/session', {
-                method: 'POST',
-                body: JSON.stringify({ userName: user, password }),
-              });
-              setPassword('');
-              await onLogin();
-            } catch (e) {
-              setError(errorText(e));
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          <label>
-            管理员账号
-            <input
-              autoComplete="username"
-              value={user}
-              onChange={(e) => setUser(e.target.value)}
-              required
-            />
-          </label>
-          <label>
-            管理员密码
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </label>
-          {error && (
-            <p role="alert" className="error">
-              {error}
-            </p>
-          )}
-          <button className="primary" disabled={busy}>
-            {busy ? '正在登录…' : '登录面板'}
-          </button>
-        </form>
-        <p className="security-note">
-          <ShieldCheck size={16} aria-hidden="true" /> 内网访问 · 受控操作 · 独立恢复点
-        </p>
-      </div>
-    </Container>
+    <LoginLayout
+      embedded={embedded}
+      title="管理你的独立世界"
+      description="仅允许白名单内网地址访问。登录后管理实例、任务和恢复点。"
+      footer="内网访问 · 受控操作 · 独立恢复点"
+    >
+      <form
+        onSubmit={async (event) => {
+          event.preventDefault();
+          setBusy(true);
+          setError('');
+          try {
+            await api('/session', {
+              method: 'POST',
+              body: JSON.stringify({ userName: user, password }),
+            });
+            setPassword('');
+            await onLogin();
+          } catch (e) {
+            setError(errorText(e));
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <label>
+          管理员账号
+          <input
+            autoComplete="username"
+            value={user}
+            onChange={(e) => setUser(e.target.value)}
+            required
+          />
+        </label>
+        <label>
+          管理员密码
+          <input
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </label>
+        {error && (
+          <p role="alert" className="error">
+            {error}
+          </p>
+        )}
+        <button className="primary" disabled={busy}>
+          {busy ? '正在登录…' : '登录面板'}
+        </button>
+      </form>
+    </LoginLayout>
   );
 }
 
@@ -383,6 +378,18 @@ function Badge({ state }: { state: string }) {
 }
 
 export function App() {
+  const { route } = usePanelRoute();
+  return route.page === 'world-view' ? (
+    <WorldReadOnlyPage
+      key={route.path.split('/')[2] || ''}
+      worldId={route.path.split('/')[2] || ''}
+    />
+  ) : (
+    <AdminApp />
+  );
+}
+
+function AdminApp() {
   const actionOpener = React.useRef<HTMLElement | null>(null);
   const recoveryOpener = React.useRef<HTMLElement | null>(null);
   const [session, setSession] = useState<string | null>(null);
@@ -671,7 +678,7 @@ export function App() {
 
   useEffect(() => {
     if (instance && tab === 'settings') setDraft(instance.desired);
-  }, [instance?.id, tab]);
+  }, [instance?.id, instance?.revision, tab]);
 
   useEffect(() => {
     setConfirmation(null);
@@ -883,6 +890,11 @@ export function App() {
               )}
             </div>
             <div className="actions">
+              {instance?.worldGuid && (
+                <RouteLink className="ghost" href={`/world-view/${instance.worldGuid}`}>
+                  只读分享页
+                </RouteLink>
+              )}
               <button className="ghost" onClick={() => void refresh()}>
                 <RefreshCw size={16} />
                 刷新
@@ -981,9 +993,20 @@ export function App() {
                           {item.worldGuid || '世界尚未核实'} · {item.writable ? '写管理' : '只读'}
                         </p>
                       </div>
-                      <RouteLink className="ghost" href={instancePath(item.id)}>
-                        查看实例
-                      </RouteLink>
+                      <div className="actions">
+                        <RouteLink className="ghost" href={instancePath(item.id)}>
+                          查看实例
+                        </RouteLink>
+                        {item.worldGuid ? (
+                          <RouteLink className="ghost" href={`/world-view/${item.worldGuid}`}>
+                            只读查看
+                          </RouteLink>
+                        ) : (
+                          <button className="ghost" disabled title="世界身份尚未核实">
+                            只读查看
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="instance-summary">
                       <span>
@@ -1279,7 +1302,25 @@ export function App() {
                             }
                           : null
                       }
-                      onChange={setDraft}
+                      onChange={async (next) => {
+                        const target = instance;
+                        setBusy(true);
+                        try {
+                          const saved = await api<Instance>(`/instances/${target.id}/settings`, {
+                            method: 'PATCH',
+                            headers: { 'If-Match': String(target.revision) },
+                            body: JSON.stringify(next),
+                          });
+                          setInstances((items) =>
+                            items.map((item) => (item.id === target.id ? saved : item)),
+                          );
+                          if (window.location.pathname === `/instances/${target.id}/settings`)
+                            setDraft(saved.desired);
+                          await refresh();
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
                       search={settingsSearch}
                       onSearchChange={setSettingsSearch}
                       disabled={
@@ -1330,27 +1371,6 @@ export function App() {
                       }}
                     />
                     <div className="actions settings-actions">
-                      <button
-                        className="primary"
-                        disabled={busy || instanceTaskLocked || !instance.writable}
-                        onClick={async () => {
-                          setBusy(true);
-                          try {
-                            await api(`/instances/${instance.id}/settings`, {
-                              method: 'PATCH',
-                              headers: { 'If-Match': String(instance.revision) },
-                              body: JSON.stringify(draft),
-                            });
-                            await refresh();
-                          } catch (e) {
-                            setActionError(errorText(e));
-                          } finally {
-                            setBusy(false);
-                          }
-                        }}
-                      >
-                        保存草稿
-                      </button>
                       <button
                         className="ghost"
                         disabled={

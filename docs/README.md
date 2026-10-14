@@ -12,6 +12,14 @@
 
 ## 阅读路径
 
+[世界只读详情](requirements/2026-10-14-world-readonly.md)：REQ-24 / W28，朋友使用世界 Id 与游戏密码查看设置、日志并下载已有世界备份；见[设计](design/2026-10-14-world-readonly.md)、[计划](planning/2026-10-14-world-readonly.md)与[真实服务端验证](verification/2026-10-14-world-readonly-real-game.md)。
+
+[参数有效性与下拉选项](verification/2026-10-13-parameter-validation.md) / [草稿持久保存](verification/2026-10-13-parameter-draft-save.md)：共享校验、弹窗直接保存与失败保留输入；[部署验证摘要](verification/2026-10-13-parameter-editing-deployment.md)已脱敏。
+
+[游戏 UDP 绑定修复](verification/2026-10-13-game-udp-binding.md)：新实例游戏 UDP 使用 IPv4 通配绑定，管理接口保持回环，见 [ADR-014](adr/014-game-udp-wildcard.md)。
+
+[v0.2.0-rc.1 版本说明](releases/2026-10-14-v0.2.0-rc.1.md) / [公开快照准备](verification/2026-10-14-public-rc020-preparation.md)：本次功能、脱敏及发行验证边界。
+
 时效正文采用年月日前缀，此导航明确选择现行版本。被替代内容见[归档索引](archive/README.md)，归档不能作为现行约束；具体流程见[日期与归档规则](standards/documentation-policy.md#日期前缀与归档)。
 
 新会话先读环境快照与任务书，再读需求、现行设计和实现计划。维护文档时先看[目录规划](standards/repository-layout.md)、[文档规则](standards/documentation-policy.md)；实施时另读[工程规则](standards/engineering-rules.md)。入口顺序及协作边界见根 [AGENTS.md](../AGENTS.md)。
